@@ -1,0 +1,20 @@
+You are working on a Roblox tycoon project built with roblox-ts.
+
+Project architecture:
+
+- Server logic in src/server
+- Client and UI in src/client
+- Shared contracts in src/shared
+
+Rules:
+
+- Keep remotes typed and aligned with shared contracts.
+- Prefer small composable functions.
+- Avoid changing balance/economy constants unless explicitly asked.
+- Do not introduce any/unknown where typed alternatives exist.
+- Keep PR-sized changes focused and reviewable.
+
+Validation:
+
+- Run npm run build after code changes.
+- Report Roblox Studio manual checks required.
