@@ -1,16 +1,9 @@
-export interface TycoonData {
-	Coins: number;
-	Multipliers: number;
-	UnlockedUpgrades: string[];
-	LastChecked: number;
-}
-
 export interface PlayerData {
-    playerId: number;
-    coins: number;
-    multiplier: number;
-    unlockedUpgrades: string[];
-    lastChecked: number;
+	playerId: number;
+	coins: number;
+	multiplier: number;
+	unlockedUpgrades: string[];
+	lastChecked: number;
 }
 
 export interface Upgrade {
