@@ -2,6 +2,7 @@ import { Players } from "@rbxts/services";
 import { UPGRADES } from "shared/types";
 import { getPlayerData, addCoins } from "./data";
 import { getRemotes } from "shared/remotes";
+import { BaseMiner } from "server/Models/Miners/BaseMiner";
 
 export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	const data = getPlayerData(player);
@@ -17,12 +18,27 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		return false;
 	}
 
-	// Deduct coins & apply upgrade
+	// Deduct coins
 	data.coins -= upgrade.cost;
-	data.multiplier += upgrade.multiplier;
-	data.unlockedUpgrades.push(upgradeId);
 
-	print(`✅ ${player.Name} bought ${upgrade.displayName}`);
+	// Handle upgrade type
+	if (upgrade.type === "multiplier" && upgrade.multiplier) {
+		data.multiplier += upgrade.multiplier;
+		data.unlockedUpgrades.push(upgradeId);
+		print(`✅ ${player.Name} bought ${upgrade.displayName}`);
+	} else if (upgrade.type === "spawner" && upgrade.spawnerType) {
+		// Spawn the miner at player's character position
+		const char = player.Character;
+		const primaryPart = char?.PrimaryPart;
+		const spawnPos = primaryPart ? primaryPart.Position : new Vector3(0, 0, 0);
+
+		const miner = new BaseMiner(upgrade.spawnerTemplate);
+
+		miner.spawn(spawnPos);
+
+		data.unlockedUpgrades.push(upgradeId);
+		print(`✅ ${player.Name} spawned ${upgrade.displayName}`);
+	}
 
 	// Notify client
 	const remotes = getRemotes();
@@ -30,3 +46,4 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 
 	return true;
 }
+
