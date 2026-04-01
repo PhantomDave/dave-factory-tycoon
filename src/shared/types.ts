@@ -14,6 +14,17 @@ interface BaseUpgrade {
 	displayName: string;
 }
 
+export interface MachineSize {
+	width: number; // grid cells wide
+	height: number; // grid cells tall
+}
+
+export const MACHINE_SIZES: Record<string, MachineSize> = {
+	BaseMiner: { width: 2, height: 2 },
+	Conveyor: { width: 1, height: 1 },
+	SellZone: { width: 1, height: 1 },
+};
+
 export interface MultiplierUpgrade extends BaseUpgrade {
 	type: "multiplier";
 	multiplier: number;
@@ -26,14 +37,19 @@ export interface SpawnerUpgrade extends BaseUpgrade {
 }
 
 export interface GridCoord {
-  x: number;   
-  z: number; 
+  x: number;
+  z: number;
 }
+
+/** Which face of a miner products are ejected toward. */
+export type DropSide = "top" | "front" | "back" | "left" | "right";
 
 
 export interface PlaceRequest {
   machineType: string;
   coord: GridCoord;
+  /** Top-surface Y from the client's raycast, used by the server to sit models on the plate. */
+  surfaceY: number;
 }
 
 export interface PlaceResponse {
@@ -41,9 +57,9 @@ export interface PlaceResponse {
   reason?: string;
 }
 
-export const GRID_CELL_SIZE = 4;   // studs per cell (matches studio default grid)
-export const GRID_COLS      = 20;  // columns per plot
-export const GRID_ROWS      = 20;  // rows per plot
+export const PLOT_SIZE = 50; // 50x50 cells per plot
+export const GRID_CELL_SIZE = 4; // studs per cell (200 studs / 50 cells)
+export const PLOT_SIZE_STUDS = 200;
 
 export type Upgrade = MultiplierUpgrade | SpawnerUpgrade;
 

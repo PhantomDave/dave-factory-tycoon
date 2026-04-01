@@ -7,7 +7,6 @@ export function getPlayerSpawnPosition(player: Player, fallback = DEFAULT_SPAWN_
 	return primaryPart ? primaryPart.Position : fallback;
 }
 
-// After:
 export function spawnTemplateModel(
   templateName: string,
   cframe: CFrame,
@@ -39,6 +38,23 @@ export function spawnTemplateModel(
 
 	spawnedModel.PrimaryPart = primaryPart;
 	spawnedModel.PivotTo(cframe);
+
+	// Lift the model so its bounding-box bottom sits exactly at cframe.Position.Y,
+	// preventing the model from clipping into the plot floor.
+	const [bbCf, bbSize] = spawnedModel.GetBoundingBox();
+	const bottomY = bbCf.Position.Y - bbSize.Y / 2;
+	const lift = cframe.Position.Y - bottomY;
+	if (lift > 0.001) {
+		spawnedModel.PivotTo(spawnedModel.GetPivot().add(new Vector3(0, lift, 0)));
+	}
+
+	// Anchor all parts so the model doesn't fall or move
+	for (const descendant of spawnedModel.GetDescendants()) {
+		if (descendant.IsA("BasePart")) {
+			descendant.Anchored = true;
+		}
+	}
+
 	spawnedModel.Parent = parent;
 	return spawnedModel;
 }
