@@ -1,5 +1,6 @@
 import { Players } from "@rbxts/services";
 import { PlayerData } from "shared/types";
+import { assignPlot, releasePlot, spawnPlayerAtPlot } from "server/plot";
 
 const playerData = new Map<Player, PlayerData>();
 
@@ -12,6 +13,8 @@ function onPlayerAdded(player: Player) {
 		lastChecked: os.time(),
 	};
 	playerData.set(player, data);
+	assignPlot(player);
+	player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
 	print(`✅ ${player.Name} joined with ${data.coins} coins`);
 }
 
@@ -20,11 +23,18 @@ function onPlayerRemoving(player: Player) {
 	if (data) {
 		print(`💾 Saving ${player.Name}: ${data.coins} coins`);
 		playerData.delete(player);
+		releasePlot(player);
 	}
 }
 
 Players.PlayerAdded.Connect(onPlayerAdded);
 Players.PlayerRemoving.Connect(onPlayerRemoving);
+
+// In Studio solo mode the local player may already exist before this
+// script runs, so iterate existing players to catch them.
+for (const player of Players.GetPlayers()) {
+	onPlayerAdded(player);
+}
 
 export function getPlayerData(player: Player): PlayerData | undefined {
 	return playerData.get(player);
