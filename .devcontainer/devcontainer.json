@@ -4,6 +4,10 @@
 		"dockerfile": "Dockerfile"
 	},
 
+	"mounts": [
+		"source=${localEnv:HOME}/.ssh,target=/home/bun/.ssh,type=bind,consistency=cached"
+	],
+
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -14,6 +18,12 @@
 				"ms-vscode.vscode-typescript-next"
 			],
 			"settings": {
+				"terminal.integrated.defaultProfile.linux": "fish",
+				"terminal.integrated.profiles.linux": {
+					"fish": {
+						"path": "/usr/bin/fish"
+					}
+				},
 				"typescript.tsdk": "node_modules/typescript/lib",
 				"files.eol": "\n",
 				"[typescript]": {

@@ -4,7 +4,7 @@
 		{
 			"label": "rojo: serve",
 			"type": "shell",
-			"command": "rojo serve",
+			"command": "rojo serve ",
 			"problemMatcher": [],
 			"runOptions": {
 				"runOn": "folderOpen"
