@@ -8,14 +8,17 @@ enum PlacementState {
 }
 
 class PlacementController {
+    private occupiedCells = new Set<string>();
     private state = PlacementState.IDLE;
     private currentMachineType?: string;
+    private currentGridCoord?: GridCoord;
     private ghostModel?: Model;
     private mouse = Players.LocalPlayer.GetMouse();
     private remotes = getRemotes();
     private renderConnection?: RBXScriptConnection;
     private clickConnection?: RBXScriptConnection;
     private rightClickConnection?: RBXScriptConnection;
+    private escKeyConnection?: RBXScriptConnection;
 
     public beginPlacing(machineType: string): void {
         if (this.state === PlacementState.PLACING) {
@@ -26,7 +29,6 @@ class PlacementController {
         this.currentMachineType = machineType;
         this.createGhostModel(machineType);
         this.connectMouseEvents();
-
         print(`Started placing: ${machineType}`);
     }
 
@@ -35,6 +37,7 @@ class PlacementController {
 
         this.state = PlacementState.IDLE;
         this.currentMachineType = undefined;
+        this.currentGridCoord = undefined;
         this.destroyGhostModel();
         this.disconnectMouseEvents();
 
@@ -168,10 +171,12 @@ class PlacementController {
         return new CFrame(worldX, plotOrigin.Y, worldZ);
     }
 
-    private isValidGridCoord(coord: GridCoord): boolean {
-        return coord.x >= 0 && coord.x < GRID_COLS &&
-               coord.z >= 0 && coord.z < GRID_ROWS;
-    }
+	private isValidGridCoord(coord: GridCoord): boolean {
+		const inBounds = coord.x >= 0 && coord.x < GRID_COLS && coord.z >= 0 && coord.z < GRID_ROWS;
+		const key = `${coord.x},${coord.z}`;
+		const notOccupied = !this.occupiedCells.has(key);
+		return inBounds && notOccupied;
+	}
 
     private connectMouseEvents(): void {
         this.renderConnection = RunService.RenderStepped.Connect(() => {
@@ -185,16 +190,23 @@ class PlacementController {
         this.rightClickConnection = this.mouse.Button2Down.Connect(() => {
             this.cancelPlacing();
         });
+        this.escKeyConnection = UserInputService.InputBegan.Connect((input) => {
+	if (input.KeyCode === Enum.KeyCode.Escape) {
+		this.cancelPlacing();
+        }
+    }); 
     }
 
     private disconnectMouseEvents(): void {
         this.renderConnection?.Disconnect();
         this.clickConnection?.Disconnect();
         this.rightClickConnection?.Disconnect();
+        this.escKeyConnection?.Disconnect();
 
         this.renderConnection = undefined;
         this.clickConnection = undefined;
         this.rightClickConnection = undefined;
+        this.escKeyConnection = undefined;
     }
 
     private updateGhostPosition(): void {
@@ -214,6 +226,7 @@ class PlacementController {
 
         if (raycastResult) {
             const gridCoord = this.worldToGrid(raycastResult.Position, plotOrigin);
+            this.currentGridCoord = gridCoord; // Track current grid position
 
             const snappedCFrame = this.gridToWorld(gridCoord, plotOrigin);
             this.ghostModel.PivotTo(snappedCFrame);
@@ -281,9 +294,11 @@ class PlacementController {
     }
 
     private handlePlaceResponse(response: { success: boolean; reason?: string }): void {
-        if (response.success) {
+        if (response.success && this.currentGridCoord) {
+            const key = `${this.currentGridCoord.x},${this.currentGridCoord.z}`;
+            this.occupiedCells.add(key);
             print("Machine placed successfully!");
-            this.cancelPlacing();
+            this.cancelPlacing(); // Reset placement state
         } else {
             print(`Placement failed: ${response.reason || "Unknown error"}`);
             if (this.currentMachineType) {
@@ -291,6 +306,8 @@ class PlacementController {
             }
         }
     }
+
+
 }
 
 export const placementController = new PlacementController();
