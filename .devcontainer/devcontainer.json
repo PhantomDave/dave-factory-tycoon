@@ -1,0 +1,37 @@
+{
+	"name": "dave-factory-tycoon",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"roblox-ts.vscode-roblox-ts",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"oven.bun-vscode",
+				"ms-vscode.vscode-typescript-next"
+			],
+			"settings": {
+				"typescript.tsdk": "node_modules/typescript/lib",
+				"files.eol": "\n",
+				"[typescript]": {
+					"editor.defaultFormatter": "dbaeumer.vscode-eslint",
+					"editor.formatOnSave": true
+				},
+				"[typescriptreact]": {
+					"editor.defaultFormatter": "dbaeumer.vscode-eslint",
+					"editor.formatOnSave": true
+				},
+				"eslint.run": "onType",
+				"eslint.format.enable": true,
+				"eslint.useFlatConfig": false
+			}
+		}
+	},
+
+	"postCreateCommand": "bun install",
+
+	"remoteUser": "bun"
+}
