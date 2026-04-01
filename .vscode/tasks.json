@@ -1,0 +1,33 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "rojo: serve",
+			"type": "shell",
+			"command": "rojo serve",
+			"problemMatcher": [],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"group": "devServer"
+			}
+		},
+		{
+			"label": "rbxtsc: watch",
+			"type": "shell",
+			"command": "bun run watch",
+			"problemMatcher": [],
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"group": "devServer"
+			}
+		}
+	]
+}
