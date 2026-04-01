@@ -1,4 +1,4 @@
-import { ReplicatedStorage, Workspace } from "@rbxts/services";
+import { spawnTemplateModel } from "server/Models/spawnUtils";
 import type { Product } from "../Products/Products";
 
 export abstract class MinerClass {
@@ -6,12 +6,14 @@ export abstract class MinerClass {
 	model: Model;
 	templateName: string;
 	product: Product;
+	ownerUserId?: number;
 
-	constructor(product: Product, templateName = "BaseMiner") {
+	constructor(product: Product, templateName = "BaseMiner", ownerUserId?: number) {
 		this.value = 0;
 		this.templateName = templateName;
 		this.model = new Instance("Model");
 		this.product = product;
+		this.ownerUserId = ownerUserId;
 	}
 
 	abstract getInterval(): number;
@@ -24,30 +26,24 @@ export abstract class MinerClass {
 	}
 
 	spawnProduct(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		return this.product.create(position);
+		const spawnedProduct = this.product.create(position);
+		spawnedProduct.SetAttribute("ProductValue", this.product.value);
+
+		if (this.ownerUserId !== undefined) {
+			spawnedProduct.SetAttribute("ProductOwnerUserId", this.ownerUserId);
+			const primaryPart = spawnedProduct.PrimaryPart;
+			if (primaryPart) {
+				primaryPart.SetAttribute("ProductOwnerUserId", this.ownerUserId);
+				primaryPart.SetAttribute("ProductValue", this.product.value);
+			}
+		}
+
+		return spawnedProduct;
 	}
 
 	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		const template = ReplicatedStorage.FindFirstChild(this.templateName);
-		if (!template || !template.IsA("Model")) {
-			error(`Template '${this.templateName}' not found in ReplicatedStorage or is not a Model`);
-		}
-
-		const spawnedModel = template.Clone();
+		const spawnedModel = spawnTemplateModel(this.templateName, position);
 		this.model = spawnedModel;
-
-		// Set PrimaryPart if not set
-		if (!this.model.PrimaryPart) {
-			this.model.PrimaryPart = this.model.FindFirstChildWhichIsA("BasePart") as BasePart;
-		}
-
-		// Use PivotTo for reliable positioning
-		if (this.model.PrimaryPart) {
-			this.model.PivotTo(new CFrame(position));
-		}
-
-		this.model.Parent = Workspace;
-
 		return this.model;
 	}
 
