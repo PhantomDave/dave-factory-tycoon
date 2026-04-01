@@ -6,15 +6,24 @@ export interface PlayerData {
 	lastChecked: number;
 }
 
-export interface Upgrade {
+interface BaseUpgrade {
 	id: string;
 	cost: number;
-	multiplier?: number;
 	displayName: string;
-	type?: "multiplier" | "spawner";
-	spawnerTemplate?: string;
-	spawnerType?: "model" | "wood_cube";
 }
+
+export interface MultiplierUpgrade extends BaseUpgrade {
+	type: "multiplier";
+	multiplier: number;
+}
+
+export interface SpawnerUpgrade extends BaseUpgrade {
+	type: "spawner";
+	spawnerTemplate: string;
+	spawnerType: "model" | "wood_cube";
+}
+
+export type Upgrade = MultiplierUpgrade | SpawnerUpgrade;
 
 export const UPGRADES: Record<string, Upgrade> = {
 	base_miner_spawner: {

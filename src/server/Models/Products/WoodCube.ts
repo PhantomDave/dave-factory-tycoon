@@ -1,8 +1,10 @@
 import { Workspace } from "@rbxts/services";
 import type { Product } from "./Products";
 
+const WOOD_CUBE_LIFETIME = 30;
+
 export class WoodCube implements Product {
-    readonly type = "WoodCube" as const;
+    type = "WoodCube" as const;
     value = 1;
 
     create(position: Vector3): Model {
@@ -14,12 +16,17 @@ export class WoodCube implements Product {
         part.Size = new Vector3(2, 2, 2);
         part.Material = Enum.Material.Wood;
         part.BrickColor = new BrickColor("Brown");
-        part.CanCollide = true;
+        part.CanCollide = false;
+        part.Anchored = true;
         part.Parent = woodModel;
 
         woodModel.PrimaryPart = part;
         woodModel.PivotTo(new CFrame(position));
         woodModel.Parent = Workspace;
+
+        task.delay(WOOD_CUBE_LIFETIME, () => {
+            woodModel.Destroy();
+        });
 
         return woodModel;
     }

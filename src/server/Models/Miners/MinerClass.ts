@@ -7,7 +7,7 @@ export abstract class MinerClass {
 	templateName: string;
 	product: Product;
 
-	constructor(templateName: string = "BaseMiner", product: Product) {
+	constructor(product: Product, templateName = "BaseMiner") {
 		this.value = 0;
 		this.templateName = templateName;
 		this.model = new Instance("Model");
@@ -24,54 +24,49 @@ export abstract class MinerClass {
 	}
 
 	spawnProduct(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		print(`[MinerClass] Spawning product: ${this.product.type} at ${position}`);
 		return this.product.create(position);
 	}
 
 	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		print(`[MinerClass] Finding template: ${this.templateName}`);
-		const template = ReplicatedStorage.FindFirstChild(this.templateName) as Model;
-		if (!template) {
-			error(`Template '${this.templateName}' not found in ReplicatedStorage`);
+		const template = ReplicatedStorage.FindFirstChild(this.templateName);
+		if (!template || !template.IsA("Model")) {
+			error(`Template '${this.templateName}' not found in ReplicatedStorage or is not a Model`);
 		}
 
-		let spawnedModel: Model;
-		print(`[MinerClass] Template found, cloning...`);
-		spawnedModel = template.Clone() as Model;
-
+		const spawnedModel = template.Clone();
 		this.model = spawnedModel;
-		print(`[MinerClass] Model created, positioning to: ${position}`);
 
 		// Set PrimaryPart if not set
 		if (!this.model.PrimaryPart) {
-			print(`[MinerClass] Setting PrimaryPart...`);
-			this.model.PrimaryPart = (this.model.FindFirstChildWhichIsA("BasePart") as BasePart);
+			this.model.PrimaryPart = this.model.FindFirstChildWhichIsA("BasePart") as BasePart;
 		}
 
 		// Use PivotTo for reliable positioning
 		if (this.model.PrimaryPart) {
 			this.model.PivotTo(new CFrame(position));
-		} else {
-			print(`[MinerClass] WARNING: No PrimaryPart found!`);
 		}
 
-		print(`[MinerClass] Setting parent to Workspace`);
 		this.model.Parent = Workspace;
-		print(`[MinerClass] Spawned successfully at ${position}`);
 
 		return this.model;
 	}
 
 	spawn(position?: Vector3): Model {
 		const finalPos = position ?? new Vector3(0, 0, 0);
-		print(`[MinerClass.spawn] Called with position: ${finalPos}`);
 		return this.spawnModel(finalPos);
 	}
 
 	startMining(): void {
 		task.spawn(() => {
-			while (true) {
+			// Continue mining only while this miner's model is part of the data model.
+			while (this.model.Parent) {
 				task.wait(this.getInterval());
+
+				// Re-check parent after waiting in case the model was removed during the delay.
+				if (!this.model.Parent) {
+					break;
+				}
+
 				this.spawnProduct(this.getSpawnPosition());
 			}
 		});

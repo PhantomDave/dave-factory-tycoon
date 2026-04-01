@@ -9,7 +9,7 @@ export interface UpgradeShopProps {
 
 export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade }) => {
     const upgrades = new Array<(typeof UPGRADES)[keyof typeof UPGRADES]>();
-    for (const [key, upgrade] of pairs(UPGRADES)) {
+    for (const [, upgrade] of pairs(UPGRADES)) {
         upgrades.push(upgrade);
     }
 
@@ -27,7 +27,7 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade 
 				HorizontalAlignment={Enum.HorizontalAlignment.Center}
 				VerticalAlignment={Enum.VerticalAlignment.Top}
 			/>
-			{upgrades.map((upgrade, index) => {
+			{upgrades.map((upgrade) => {
 				const canAfford = balance >= upgrade.cost;
 				return (
 					<frame
