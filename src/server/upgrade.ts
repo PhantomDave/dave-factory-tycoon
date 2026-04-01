@@ -1,8 +1,8 @@
 import { UPGRADES } from "shared/types";
-import { getPlayerData } from "./data";
+import { getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
-import { BaseMiner } from "server/Models/Miners/BaseMiner";
-import { getPlayerSpawnPosition, spawnTemplateModel } from "server/Models/spawnUtils";
+import { BaseMiner } from "server/models/miners/baseMiner";
+import { getPlayerSpawnPosition, spawnTemplateModel } from "server/models/spawnUtils";
 
 export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	const data = getPlayerData(player);

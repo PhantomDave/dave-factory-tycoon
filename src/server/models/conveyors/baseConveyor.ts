@@ -1,4 +1,4 @@
-import { ConveyorClass } from "./ConveyorClass";
+import { ConveyorClass } from "./conveyorClass";
 
 export class BaseConveyor extends ConveyorClass {
 	constructor(templateName = "Conveyor") {

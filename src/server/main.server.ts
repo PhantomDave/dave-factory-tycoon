@@ -1,9 +1,9 @@
 import { getRemotes } from "shared/remotes";
 import { startMiningLoop } from "server/miner";
 import { onBuyUpgrade } from "server/upgrade";
-import { BaseConveyor } from "server/Models/Conveyors/BaseConveyor";
-import { getPlayerSpawnPosition } from "server/Models/spawnUtils";
-import { initializeSellZones } from "server/Models/SellZone";
+import { BaseConveyor } from "server/models/conveyors/baseConveyor";
+import { getPlayerSpawnPosition } from "server/models/spawnUtils";
+import { initializeSellZones } from "server/models/sellZone";
 
 print("🚀 Server starting...");
 

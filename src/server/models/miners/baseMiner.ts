@@ -1,5 +1,5 @@
-import { MinerClass } from "./MinerClass";
-import { WoodCube } from "../Products/WoodCube";
+import { MinerClass } from "./minerClass";
+import { WoodCube } from "../products/woodCube";
 
 export class BaseMiner extends MinerClass {
 	constructor(templateName = "BaseMiner", ownerUserId?: number) {

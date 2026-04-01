@@ -1,5 +1,5 @@
 import { Players } from "@rbxts/services";
-import { addCoins, getBalance, getPlayerData } from "./data";
+import { addCoins, getBalance, getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
 
 export function startMiningLoop(): void {

@@ -1,4 +1,4 @@
-import { spawnTemplateModel } from "server/Models/spawnUtils";
+import { spawnTemplateModel } from "server/models/spawnUtils";
 
 export abstract class ConveyorClass {
 	model: Model;
