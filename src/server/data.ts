@@ -1,18 +1,11 @@
 import { Players } from "@rbxts/services";
-import { PlayerData } from "shared/types";
 import { assignPlot, releasePlot, spawnPlayerAtPlot } from "server/plot";
+import { PlayerService } from "server/services/playerService";
 
-const playerData = new Map<Player, PlayerData>();
+export const playerService = new PlayerService();
 
 function onPlayerAdded(player: Player) {
-	const data: PlayerData = {
-		playerId: player.UserId,
-		coins: 0,
-		multiplier: 1,
-		unlockedUpgrades: [],
-		lastChecked: os.time(),
-	};
-	playerData.set(player, data);
+	playerService.addPlayer(player);
 
 	const plot = assignPlot(player);
 	if (!plot) {
@@ -28,15 +21,15 @@ function onPlayerAdded(player: Player) {
 		spawnPlayerAtPlot(player, existingCharacter);
 	}
 
-	print(`✅ ${player.Name} joined with ${data.coins} coins`);
+	print(`✅ ${player.Name} joined with ${playerService.getBalance(player)} coins`);
 }
 
 function onPlayerRemoving(player: Player) {
-	const data = playerData.get(player);
+	const data = playerService.getPlayer(player);
 	if (data) {
 		print(`💾 Saving ${player.Name}: ${data.coins} coins`);
-		playerData.delete(player);
 	}
+	playerService.removePlayer(player);
 	releasePlot(player);
 }
 
@@ -49,18 +42,14 @@ for (const player of Players.GetPlayers()) {
 	onPlayerAdded(player);
 }
 
-export function getPlayerData(player: Player): PlayerData | undefined {
-	return playerData.get(player);
+export function getPlayerData(player: Player) {
+	return playerService.getPlayer(player);
 }
 
 export function addCoins(player: Player, amount: number): void {
-	const data = getPlayerData(player);
-	if (data) {
-		data.coins += amount;
-	}
+	playerService.addCoins(player, amount);
 }
 
 export function getBalance(player: Player): number {
-	const data = getPlayerData(player);
-	return data ? data.coins : 0;
+	return playerService.getBalance(player);
 }
