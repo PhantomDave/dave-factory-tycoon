@@ -1,6 +1,7 @@
 import { Players } from "@rbxts/services";
 import { getPlotPosition } from "server/plot";
-import { GridCoord, GRID_CELL_SIZE, PLOT_SIZE, MACHINE_SIZES, DropSide } from "shared/types";
+import { GridCoord, PLOT_SIZE, MACHINE_SIZES, DropSide } from "shared/types";
+import { gridCoordToWorldPos } from "shared/gridMath";
 import { logger } from "./utils/logger";
 
 const occupancy    = new Map<Player, Set<string>>();
@@ -17,18 +18,14 @@ export function clearPlayerGrid(player: Player): void {
 }
 
 export function gridCoordToWorld(player: Player, coord: GridCoord, machineType: string, surfaceY?: number): CFrame {
-  const origin = getPlotPosition(player) ?? new Vector3(0, 0, 0);
-  const size = MACHINE_SIZES[machineType] || { width: 1, height: 1 };
-
-  // Center the pivot on the full footprint (not just the top-left cell).
-  const worldX = origin.X + coord.x * GRID_CELL_SIZE + size.width  * GRID_CELL_SIZE / 2;
-  const worldZ = origin.Z + coord.z * GRID_CELL_SIZE + size.height * GRID_CELL_SIZE / 2;
+  const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
+  const worldPos = gridCoordToWorldPos(coord, plotCenter, machineType);
   // Use the client's raycast surface Y when available; otherwise fall back to the stored origin Y.
-  const worldY = surfaceY ?? origin.Y;
-  const worldCFrame = new CFrame(worldX, worldY, worldZ);
+  const worldY = surfaceY ?? plotCenter.Y;
+  const worldCFrame = new CFrame(worldPos.X, worldY, worldPos.Z);
 
-  logger.info(`Player: ${player.Name}, Grid: (${coord.x}, ${coord.z}) -> World: (${worldX}, ${worldY}, ${worldZ})`);
-  logger.info(`Plot Origin: (${origin.X}, ${origin.Y}, ${origin.Z})`);
+  logger.info(`Player: ${player.Name}, Grid: (${coord.x}, ${coord.z}) -> World: (${worldPos.X}, ${worldY}, ${worldPos.Z})`);
+  logger.info(`Plot Center: (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z})`);
 
   return worldCFrame;
 }

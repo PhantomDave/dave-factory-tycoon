@@ -58,8 +58,8 @@ export interface PlaceResponse {
 }
 
 export const PLOT_SIZE = 50; // 50x50 cells per plot
-export const GRID_CELL_SIZE = 4; // studs per cell (200 studs / 50 cells)
-export const PLOT_SIZE_STUDS = 200;
+export const PLOT_SIZE_STUDS = 50; // actual plot size in studs (50x1x50)
+export const GRID_CELL_SIZE = PLOT_SIZE_STUDS / PLOT_SIZE; // 1 stud per cell
 
 export type Upgrade = MultiplierUpgrade | SpawnerUpgrade;
 

@@ -1,6 +1,7 @@
 import { Players, ReplicatedStorage, RunService, UserInputService, Workspace } from "@rbxts/services";
 import { GridCoord, PlaceRequest, GRID_CELL_SIZE, PLOT_SIZE, MACHINE_SIZES, DropSide } from "shared/types";
 import { getRemotes } from "shared/remotes";
+import { getPlotMinCorner, gridCoordToWorldPos, worldToGridCoord } from "shared/gridMath";
 
 enum PlacementState {
     IDLE = "IDLE",
@@ -28,6 +29,8 @@ class PlacementController {
     private ghostBBSize?: Vector3;
     /** Neon indicator showing which side products will drop from (miners only). */
     private dropSideIndicator?: Part;
+    /** Per-cell neon highlight parts showing the current footprint state. */
+    private cellHighlights: Part[] = [];
 
     public beginPlacing(machineType: string): void {
         if (this.state === PlacementState.PLACING) {
@@ -88,6 +91,8 @@ class PlacementController {
         if (machineType === "BaseMiner") {
             this.dropSideIndicator = this.createDropSideIndicator();
         }
+
+        this.createCellHighlights(machineType);
     }
 
     private createDropSideIndicator(): Part {
@@ -157,6 +162,63 @@ class PlacementController {
         }
     }
 
+    private createCellHighlights(machineType: string): void {
+        this.destroyCellHighlights();
+
+        const size = MACHINE_SIZES[machineType] || { width: 1, height: 1 };
+        for (let x = 0; x < size.width; x++) {
+            for (let z = 0; z < size.height; z++) {
+                const part = new Instance("Part");
+                part.Name = "PlacementCellHighlight";
+                part.Size = new Vector3(GRID_CELL_SIZE * 0.9, 0.12, GRID_CELL_SIZE * 0.9);
+                part.Anchored = true;
+                part.CanCollide = false;
+                part.CanQuery = false;
+                part.Material = Enum.Material.Neon;
+                part.Color = Color3.fromRGB(0, 255, 140);
+                part.Transparency = 0.4;
+                part.CastShadow = false;
+                part.Parent = Workspace;
+                this.cellHighlights.push(part);
+            }
+        }
+    }
+
+    private destroyCellHighlights(): void {
+        for (const part of this.cellHighlights) {
+            part.Destroy();
+        }
+        this.cellHighlights = [];
+    }
+
+    private updateCellHighlights(coord: GridCoord, plotCenter: Vector3, surfaceY: number): void {
+        if (!this.currentMachineType || this.cellHighlights.size() === 0) return;
+
+        const size = MACHINE_SIZES[this.currentMachineType] || { width: 1, height: 1 };
+        const plotMinCorner = getPlotMinCorner(plotCenter);
+
+        let i = 0;
+        for (let x = 0; x < size.width; x++) {
+            for (let z = 0; z < size.height; z++) {
+                const cell = this.cellHighlights[i++];
+                if (!cell) continue;
+
+                const cellX = coord.x + x;
+                const cellZ = coord.z + z;
+                const outOfBounds = cellX < 0 || cellX >= PLOT_SIZE || cellZ < 0 || cellZ >= PLOT_SIZE;
+                const occupied = this.occupiedCells.has(`${cellX},${cellZ}`);
+                cell.Color = (outOfBounds || occupied)
+                    ? Color3.fromRGB(255, 70, 70)
+                    : Color3.fromRGB(0, 255, 140);
+
+                const worldX = plotMinCorner.X + (coord.x + x + 0.5) * GRID_CELL_SIZE;
+                const worldZ = plotMinCorner.Z + (coord.z + z + 0.5) * GRID_CELL_SIZE;
+
+                cell.CFrame = new CFrame(worldX, surfaceY + 0.12, worldZ);
+            }
+        }
+    }
+
     private destroyGhostModel(): void {
         if (this.ghostModel) {
             this.ghostModel.Destroy();
@@ -165,65 +227,58 @@ class PlacementController {
         this.dropSideIndicator = undefined;
         this.ghostBBSize = undefined;
         this.ghostHeightOffset = 0;
+        this.destroyCellHighlights();
     }
 
     private createGridOverlay(): void {
-        const plotOrigin = this.getPlotOrigin();
-        if (!plotOrigin) return;
+        const plotCenter = this.getPlotOrigin();
+        if (!plotCenter) return;
 
         const plotSizeStuds = PLOT_SIZE * GRID_CELL_SIZE;
+
+        const baseY = plotCenter.Y + 0.06;
+        const plotMinCorner = getPlotMinCorner(plotCenter);
 
         const overlayPart = new Instance("Part");
         overlayPart.Name = "GridOverlay";
         overlayPart.Size = new Vector3(plotSizeStuds, 0.05, plotSizeStuds);
         overlayPart.CFrame = new CFrame(
-            plotOrigin.X + plotSizeStuds / 2,
-            plotOrigin.Y + 0.1,
-            plotOrigin.Z + plotSizeStuds / 2,
+            plotCenter.X,
+            baseY,
+            plotCenter.Z,
         );
         overlayPart.Anchored = true;
         overlayPart.CanCollide = false;
+        overlayPart.CanQuery = false;
         overlayPart.Transparency = 1;
         overlayPart.Parent = Workspace;
 
-        const gui = new Instance("SurfaceGui");
-        gui.Face = Enum.NormalId.Top;
-        gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud;
-        gui.PixelsPerStud = 10;
-        gui.AlwaysOnTop = false;
-        gui.Parent = overlayPart;
+        const cornerSize = 1.2;
+        const cornerY = baseY + 0.05;
+        const cornerColor = Color3.fromRGB(90, 160, 255);
 
-        const bg = new Instance("Frame");
-        bg.Size = new UDim2(1, 0, 1, 0);
-        bg.BackgroundColor3 = Color3.fromRGB(150, 180, 255);
-        bg.BackgroundTransparency = 0.85;
-        bg.BorderSizePixel = 0;
-        bg.Parent = gui;
+        const addCorner = (x: number, z: number) => {
+            const marker = new Instance("Part");
+            marker.Name = "GridOverlayCorner";
+            marker.Size = new Vector3(cornerSize, 0.08, cornerSize);
+            marker.CFrame = new CFrame(x, cornerY, z);
+            marker.Anchored = true;
+            marker.CanCollide = false;
+            marker.CanQuery = false;
+            marker.Material = Enum.Material.Neon;
+            marker.Color = cornerColor;
+            marker.Transparency = 0.35;
+            marker.CastShadow = false;
+            marker.Parent = overlayPart;
+        };
 
-        const pixelsPerCell = GRID_CELL_SIZE * 10;
-
-        for (let i = 0; i <= PLOT_SIZE; i++) {
-            const line = new Instance("Frame");
-            line.Size = new UDim2(0, 1, 1, 0);
-            line.Position = new UDim2(0, i * pixelsPerCell, 0, 0);
-            line.BackgroundColor3 = Color3.fromRGB(100, 140, 255);
-            line.BackgroundTransparency = 0.4;
-            line.BorderSizePixel = 0;
-            line.Parent = bg;
-        }
-
-        for (let i = 0; i <= PLOT_SIZE; i++) {
-            const line = new Instance("Frame");
-            line.Size = new UDim2(1, 0, 0, 1);
-            line.Position = new UDim2(0, 0, 0, i * pixelsPerCell);
-            line.BackgroundColor3 = Color3.fromRGB(100, 140, 255);
-            line.BackgroundTransparency = 0.4;
-            line.BorderSizePixel = 0;
-            line.Parent = bg;
-        }
+        addCorner(plotMinCorner.X, plotMinCorner.Z);
+        addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z);
+        addCorner(plotMinCorner.X, plotMinCorner.Z + plotSizeStuds);
+        addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z + plotSizeStuds);
 
         this.gridOverlay = overlayPart;
-        print(`Grid overlay created at (${plotOrigin.X}, ${plotOrigin.Y}, ${plotOrigin.Z})`);
+        print(`Grid overlay created at (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z})`);
     }
 
     private destroyGridOverlay(): void {
@@ -258,21 +313,12 @@ class PlacementController {
     }
 
     private worldToGrid(worldPos: Vector3, plotOrigin: Vector3): GridCoord {
-        const localX = (worldPos.X - plotOrigin.X) / GRID_CELL_SIZE;
-        const localZ = (worldPos.Z - plotOrigin.Z) / GRID_CELL_SIZE;
-
-        return {
-            x: math.floor(localX),
-            z: math.floor(localZ)
-        };
+        return worldToGridCoord(worldPos, plotOrigin);
     }
 
     private gridToWorld(coord: GridCoord, plotOrigin: Vector3, machineType: string): CFrame {
-        const size = MACHINE_SIZES[machineType] || { width: 1, height: 1 };
-        // Center on the full footprint, not just the top-left cell.
-        const worldX = plotOrigin.X + coord.x * GRID_CELL_SIZE + size.width  * GRID_CELL_SIZE / 2;
-        const worldZ = plotOrigin.Z + coord.z * GRID_CELL_SIZE + size.height * GRID_CELL_SIZE / 2;
-        return new CFrame(worldX, plotOrigin.Y, worldZ);
+        const worldPos = gridCoordToWorldPos(coord, plotOrigin, machineType);
+        return new CFrame(worldPos);
     }
 
     private isValidGridCoord(coord: GridCoord, machineType: string = "Conveyor"): boolean {
@@ -420,25 +466,25 @@ class PlacementController {
 
         const raycastParams = new RaycastParams();
         raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
-        raycastParams.FilterDescendantsInstances = [this.ghostModel];
+        // Exclude the ghost and cell highlights so the ray hits the plate, not our own parts.
+        raycastParams.FilterDescendantsInstances = [this.ghostModel, ...this.cellHighlights];
 
         const raycastResult = Workspace.Raycast(unitRay.Origin, unitRay.Direction.mul(1000), raycastParams);
 
         if (raycastResult) {
+            const surfaceY = raycastResult.Position.Y;
+
             const gridCoord = this.worldToGrid(raycastResult.Position, plotOrigin);
             this.currentGridCoord = gridCoord;
 
             // Snap to grid, then lift the ghost so its bottom sits at the plot floor.
             const snappedCFrame = this.gridToWorld(gridCoord, plotOrigin, this.currentMachineType);
-            // Use the real raycast surface Y so the ghost sits on top of the plate
-            // rather than clipping into it (plotOrigin.Y may not equal the plate top surface).
-            const liftedY = raycastResult.Position.Y + this.ghostHeightOffset;
+            const liftedY = surfaceY + this.ghostHeightOffset;
             this.ghostModel.PivotTo(new CFrame(snappedCFrame.Position.X, liftedY, snappedCFrame.Position.Z));
 
             const isValid = this.isValidGridCoord(gridCoord, this.currentMachineType);
             this.colorGhost(isValid);
-
-            // Refresh the drop-side indicator position.
+            this.updateCellHighlights(gridCoord, plotOrigin, surfaceY);
             this.updateDropSideIndicator();
         }
     }
@@ -516,6 +562,7 @@ class PlacementController {
             }
         }
     }
+
 }
 
 export const placementController = new PlacementController();
