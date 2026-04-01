@@ -4,20 +4,21 @@ import { onBuyUpgrade } from "server/upgrade";
 import { BaseConveyor } from "server/models/conveyors/baseConveyor";
 import { getPlayerSpawnPosition } from "server/models/spawnUtils";
 import { initializeSellZones } from "server/models/sellZone";
+import { logger } from "server/utils/logger";
 
-print("🚀 Server starting...");
+logger.info("Server starting...");
 
 task.spawn(() => {
 	// Initialize networking
 	const remotes = getRemotes();
-	print("✅ Remotes initialized");
+	logger.info("Remotes initialized");
 
 	// Start passive income loop
 	task.spawn(() => startMiningLoop());
-	print("✅ Mining loop started");
+	logger.info("Mining loop started");
 
 	initializeSellZones();
-	print("✅ Sell zones initialized");
+	logger.info("Sell zones initialized");
 
 	remotes.BuyUpgrade.OnServerEvent.Connect((player: Player, upgradeId: string) => {
 		onBuyUpgrade(player, upgradeId);
@@ -28,6 +29,6 @@ task.spawn(() => {
 
 		const conveyor = new BaseConveyor();
 		conveyor.spawn(spawnPos);
-		print(`✅ ${player.Name} spawned a conveyor`);
+		logger.info(`${player.Name} spawned a conveyor`);
 	});
 });

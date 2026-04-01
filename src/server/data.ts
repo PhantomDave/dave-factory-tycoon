@@ -1,6 +1,7 @@
 import { Players } from "@rbxts/services";
 import { assignPlot, releasePlot, spawnPlayerAtPlot } from "server/plot";
 import { PlayerService } from "server/services/playerService";
+import { logger } from "server/utils/logger";
 
 export const playerService = new PlayerService();
 
@@ -21,13 +22,13 @@ function onPlayerAdded(player: Player) {
 		spawnPlayerAtPlot(player, existingCharacter);
 	}
 
-	print(`✅ ${player.Name} joined with ${playerService.getBalance(player)} coins`);
+	logger.info(`${player.Name} joined with ${playerService.getBalance(player)} coins`);
 }
 
 function onPlayerRemoving(player: Player) {
 	const data = playerService.getPlayer(player);
 	if (data) {
-		print(`💾 Saving ${player.Name}: ${data.coins} coins`);
+		logger.info(`Saving ${player.Name}: ${data.coins} coins`);
 	}
 	playerService.removePlayer(player);
 	releasePlot(player);

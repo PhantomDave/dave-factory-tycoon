@@ -1,4 +1,5 @@
 import { spawnTemplateModel } from "server/models/spawnUtils";
+import { logger } from "server/utils/logger";
 
 export abstract class ConveyorClass {
 	model: Model;
@@ -32,7 +33,7 @@ export abstract class ConveyorClass {
 	startTransporting(): void {
 		const conveyorSurface = this.getConveyorSurface();
 		if (!conveyorSurface) {
-			warn(`Conveyor '${this.templateName}' has no BasePart to transport items on`);
+			logger.warn(`Conveyor '${this.templateName}' has no BasePart to transport items on`);
 			return;
 		}
 
