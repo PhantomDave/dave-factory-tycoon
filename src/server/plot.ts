@@ -47,6 +47,7 @@ export function assignPlot(player: Player): Folder | undefined {
 	// Store the assigned position as an attribute so other server code
 	// (miners, sell zones) can read where this plot's origin is.
 	folder.SetAttribute("PlotPosition", PLOT_POSITIONS[plotIndex]);
+	player.SetAttribute("PlotNumber", plotIndex);
 
 	// Parent last — triggers replication.
 	folder.Parent = Workspace;

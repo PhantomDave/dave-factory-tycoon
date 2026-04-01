@@ -7,7 +7,12 @@ export function getPlayerSpawnPosition(player: Player, fallback = DEFAULT_SPAWN_
 	return primaryPart ? primaryPart.Position : fallback;
 }
 
-export function spawnTemplateModel(templateName: string, position: Vector3 = DEFAULT_SPAWN_POSITION): Model {
+// After:
+export function spawnTemplateModel(
+  templateName: string,
+  cframe: CFrame,
+  parent: Instance = Workspace,
+): Model {
 	const template = ReplicatedStorage.FindFirstChild(templateName);
 	if (!template || (!template.IsA("Model") && !template.IsA("BasePart"))) {
 		error(`Template '${templateName}' not found in ReplicatedStorage or is not a Model/Part`);
@@ -33,7 +38,7 @@ export function spawnTemplateModel(templateName: string, position: Vector3 = DEF
 	}
 
 	spawnedModel.PrimaryPart = primaryPart;
-	spawnedModel.PivotTo(new CFrame(position));
-	spawnedModel.Parent = Workspace;
+	spawnedModel.PivotTo(cframe);
+	spawnedModel.Parent = parent;
 	return spawnedModel;
 }

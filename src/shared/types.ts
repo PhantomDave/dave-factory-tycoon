@@ -25,6 +25,26 @@ export interface SpawnerUpgrade extends BaseUpgrade {
 	spawnerType: "model" | "wood_cube";
 }
 
+export interface GridCoord {
+  x: number;   
+  z: number; 
+}
+
+
+export interface PlaceRequest {
+  machineType: string;
+  coord: GridCoord;
+}
+
+export interface PlaceResponse {
+  success: boolean;
+  reason?: string;
+}
+
+export const GRID_CELL_SIZE = 4;   // studs per cell (matches studio default grid)
+export const GRID_COLS      = 20;  // columns per plot
+export const GRID_ROWS      = 20;  // rows per plot
+
 export type Upgrade = MultiplierUpgrade | SpawnerUpgrade;
 
 export const UPGRADES: Record<string, Upgrade> = {
@@ -42,6 +62,14 @@ export const UPGRADES: Record<string, Upgrade> = {
 		displayName: "Spawn Sell Zone",
 		type: "spawner",
 		spawnerTemplate: "SellZone",
+		spawnerType: "model",
+	},
+	conveyor_spawner: {
+		id: "conveyor_spawner",
+		cost: 0,
+		displayName: "Spawn Conveyor",
+		type: "spawner",
+		spawnerTemplate: "Conveyor",
 		spawnerType: "model",
 	},
 	basic_pickaxe: {

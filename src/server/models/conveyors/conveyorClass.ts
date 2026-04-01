@@ -19,16 +19,14 @@ export abstract class ConveyorClass {
 		return this.model.FindFirstChildWhichIsA("BasePart") as BasePart | undefined;
 	}
 
-	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		this.model = spawnTemplateModel(this.templateName, position);
+	spawnModel(cframe: CFrame, parent: Instance): Model {
+		const spawnedModel = spawnTemplateModel(this.templateName, cframe, parent);
+		this.model = spawnedModel;
 		return this.model;
 	}
 
-	spawn(position?: Vector3): Model {
-		const finalPos = position ?? new Vector3(0, 0, 0);
-		const model = this.spawnModel(finalPos);
-		this.startTransporting();
-		return model;
+	spawn(cframe: CFrame, parent: Instance): void {
+		this.spawnModel(cframe, parent);
 	}
 
 	startTransporting(): void {

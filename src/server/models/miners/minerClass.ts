@@ -41,15 +41,14 @@ export abstract class MinerClass {
 		return spawnedProduct;
 	}
 
-	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		const spawnedModel = spawnTemplateModel(this.templateName, position);
+	spawnModel(cframe: CFrame, parent: Instance): Model {
+		const spawnedModel = spawnTemplateModel(this.templateName, cframe, parent);
 		this.model = spawnedModel;
 		return this.model;
 	}
 
-	spawn(position?: Vector3): Model {
-		const finalPos = position ?? new Vector3(0, 0, 0);
-		return this.spawnModel(finalPos);
+	spawn(cframe: CFrame, parent: Instance): void {
+		this.spawnModel(cframe, parent);
 	}
 
 	startMining(): void {

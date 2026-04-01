@@ -34,12 +34,16 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		logger.info(`${player.Name} bought ${upgrade.displayName}`);
 		remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 	} else if (upgrade.type === "spawner") {
+		// Note: Spawner upgrades should use the placement system instead
+		// This is a temporary fix for backwards compatibility
 		const spawnPos = getPlayerSpawnPosition(player);
+		const spawnCFrame = new CFrame(spawnPos);
+
 		if (upgrade.spawnerTemplate === "BaseMiner") {
 			const miner = new BaseMiner(upgrade.spawnerTemplate, player.UserId);
-			miner.spawn(spawnPos);
+			miner.spawn(spawnCFrame, game.Workspace);
 		} else {
-			spawnTemplateModel(upgrade.spawnerTemplate, spawnPos);
+			spawnTemplateModel(upgrade.spawnerTemplate, spawnCFrame);
 		}
 
 		data.unlockedUpgrades.push(upgradeId);

@@ -11,9 +11,8 @@ export class BaseMiner extends MinerClass {
 		return MINING_CONFIG.BASE_INTERVAL_SECONDS;
 	}
 
-	spawn(position?: Vector3): Model {
-		const model = super.spawn(position);
+	spawn(cframe: CFrame, parent: Instance): void {
+		super.spawn(cframe, parent);
 		this.startMining();
-		return model;
 	}
 }
