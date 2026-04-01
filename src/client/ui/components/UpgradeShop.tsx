@@ -12,7 +12,7 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade 
     for (const [, upgrade] of pairs(UPGRADES)) {
         upgrades.push(upgrade);
     }
-    
+
 	return (
 		<scrollingframe
 			Size={new UDim2(0, 300, 0, 400)}
@@ -21,6 +21,12 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade 
 			BorderSizePixel={0}
 			CanvasSize={new UDim2(0, 0, 0, upgrades.size() * 80)}
 		>
+			<uilistlayout
+				Padding={new UDim(0, 5)}
+				FillDirection={Enum.FillDirection.Vertical}
+				HorizontalAlignment={Enum.HorizontalAlignment.Center}
+				VerticalAlignment={Enum.VerticalAlignment.Top}
+			/>
 			{upgrades.map((upgrade) => {
 				const canAfford = balance >= upgrade.cost;
 				return (

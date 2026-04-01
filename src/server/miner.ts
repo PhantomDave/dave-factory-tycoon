@@ -12,7 +12,6 @@ export function startMiningLoop(): void {
 			addCoins(player, 1);
 			const data = getPlayerData(player);
 			if (data) {
-				print(`💰 ${player.Name}: ${data.coins} coins`);
 				remotes.UpdateBalance.FireClient(player, data.coins);
 			}
 		}
