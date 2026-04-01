@@ -31,6 +31,8 @@ class PlacementController {
     private dropSideIndicator?: Part;
     /** Per-cell neon highlight parts showing the current footprint state. */
     private cellHighlights: Part[] = [];
+    /** Number of clockwise 90-degree turns applied to the current ghost. */
+    private rotationQuarterTurns = 0;
 
     public beginPlacing(machineType: string): void {
         if (this.state === PlacementState.PLACING) {
@@ -39,6 +41,7 @@ class PlacementController {
 
         this.state = PlacementState.PLACING;
         this.currentMachineType = machineType;
+        this.rotationQuarterTurns = 0;
         this.createGhostModel(machineType);
         this.createGridOverlay();
         this.connectMouseEvents();
@@ -51,6 +54,7 @@ class PlacementController {
         this.state = PlacementState.IDLE;
         this.currentMachineType = undefined;
         this.currentGridCoord = undefined;
+        this.rotationQuarterTurns = 0;
         this.destroyGhostModel();
         this.destroyGridOverlay();
         this.disconnectMouseEvents();
@@ -236,22 +240,61 @@ class PlacementController {
 
         const plotSizeStuds = PLOT_SIZE * GRID_CELL_SIZE;
 
-        const baseY = plotCenter.Y + 0.06;
         const plotMinCorner = getPlotMinCorner(plotCenter);
+        const probeOrigin = new Vector3(
+            plotMinCorner.X + plotSizeStuds / 2,
+            plotCenter.Y + 100,
+            plotMinCorner.Z + plotSizeStuds / 2,
+        );
+        const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -200, 0));
+        const baseY = probeResult ? probeResult.Position.Y + 0.06 : plotCenter.Y + 0.06;
 
         const overlayPart = new Instance("Part");
         overlayPart.Name = "GridOverlay";
         overlayPart.Size = new Vector3(plotSizeStuds, 0.05, plotSizeStuds);
         overlayPart.CFrame = new CFrame(
-            plotCenter.X,
+            plotMinCorner.X + plotSizeStuds / 2,
             baseY,
-            plotCenter.Z,
+            plotMinCorner.Z + plotSizeStuds / 2,
         );
         overlayPart.Anchored = true;
         overlayPart.CanCollide = false;
         overlayPart.CanQuery = false;
         overlayPart.Transparency = 1;
         overlayPart.Parent = Workspace;
+
+        const gui = new Instance("SurfaceGui");
+        gui.Name = "GridOverlayGui";
+        gui.Face = Enum.NormalId.Top;
+        gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud;
+        gui.PixelsPerStud = 12;
+        gui.AlwaysOnTop = false;
+        gui.Parent = overlayPart;
+
+        const bg = new Instance("Frame");
+        bg.Size = new UDim2(1, 0, 1, 0);
+        bg.BackgroundTransparency = 1;
+        bg.BorderSizePixel = 0;
+        bg.Parent = gui;
+
+        const pixelsPerCell = GRID_CELL_SIZE * gui.PixelsPerStud;
+        for (let i = 0; i <= PLOT_SIZE; i++) {
+            const vertical = new Instance("Frame");
+            vertical.Size = new UDim2(0, 1, 1, 0);
+            vertical.Position = new UDim2(0, i * pixelsPerCell, 0, 0);
+            vertical.BackgroundColor3 = Color3.fromRGB(90, 150, 255);
+            vertical.BackgroundTransparency = 0.55;
+            vertical.BorderSizePixel = 0;
+            vertical.Parent = bg;
+
+            const horizontal = new Instance("Frame");
+            horizontal.Size = new UDim2(1, 0, 0, 1);
+            horizontal.Position = new UDim2(0, 0, 0, i * pixelsPerCell);
+            horizontal.BackgroundColor3 = Color3.fromRGB(90, 150, 255);
+            horizontal.BackgroundTransparency = 0.55;
+            horizontal.BorderSizePixel = 0;
+            horizontal.Parent = bg;
+        }
 
         const cornerSize = 1.2;
         const cornerY = baseY + 0.05;
@@ -313,7 +356,7 @@ class PlacementController {
     }
 
     private worldToGrid(worldPos: Vector3, plotOrigin: Vector3): GridCoord {
-        return worldToGridCoord(worldPos, plotOrigin);
+        return worldToGridCoord(worldPos, plotOrigin, this.currentMachineType);
     }
 
     private gridToWorld(coord: GridCoord, plotOrigin: Vector3, machineType: string): CFrame {
@@ -365,7 +408,7 @@ class PlacementController {
      */
     private getAutoDropSide(coord: GridCoord, machineType: string): DropSide {
         const size = MACHINE_SIZES[machineType];
-        if (!size) return "top";
+        if (!size) return this.getRotationDropSide();
 
         const isConveyor = (x: number, z: number) =>
             this.occupiedCells.get(`${x},${z}`) === "Conveyor";
@@ -383,7 +426,20 @@ class PlacementController {
             if (isConveyor(coord.x + x, coord.z - 1)) return "front";
         }
 
-        return "top";
+        return this.getRotationDropSide();
+    }
+
+    private getRotationDropSide(): DropSide {
+        switch (this.rotationQuarterTurns % 4) {
+            case 1:
+                return "right";
+            case 2:
+                return "back";
+            case 3:
+                return "left";
+            default:
+                return "front";
+        }
     }
 
     /** Updates the neon indicator to show the current auto drop side. */
@@ -436,9 +492,16 @@ class PlacementController {
             this.cancelPlacing();
         });
 
-        this.escKeyConnection = UserInputService.InputBegan.Connect((input) => {
+        this.escKeyConnection = UserInputService.InputBegan.Connect((input, gameProcessed) => {
+            if (gameProcessed) return;
+
             if (input.KeyCode === Enum.KeyCode.Escape) {
                 this.cancelPlacing();
+                return;
+            }
+
+            if (input.KeyCode === Enum.KeyCode.R && this.state === PlacementState.PLACING) {
+                this.rotationQuarterTurns = (this.rotationQuarterTurns + 1) % 4;
             }
         });
     }
@@ -480,7 +543,9 @@ class PlacementController {
             // Snap to grid, then lift the ghost so its bottom sits at the plot floor.
             const snappedCFrame = this.gridToWorld(gridCoord, plotOrigin, this.currentMachineType);
             const liftedY = surfaceY + this.ghostHeightOffset;
-            this.ghostModel.PivotTo(new CFrame(snappedCFrame.Position.X, liftedY, snappedCFrame.Position.Z));
+            const baseCFrame = new CFrame(snappedCFrame.Position.X, liftedY, snappedCFrame.Position.Z);
+            const rotation = CFrame.Angles(0, math.rad(this.rotationQuarterTurns * 90), 0);
+            this.ghostModel.PivotTo(baseCFrame.mul(rotation));
 
             const isValid = this.isValidGridCoord(gridCoord, this.currentMachineType);
             this.colorGhost(isValid);
@@ -535,6 +600,7 @@ class PlacementController {
             machineType: this.currentMachineType,
             coord: coord,
             surfaceY: surfaceY,
+            rotationQuarterTurns: this.rotationQuarterTurns,
         };
 
         print(`[CLIENT DEBUG] Sending place request: ${this.currentMachineType} at grid (${coord.x}, ${coord.z})`);

@@ -50,6 +50,8 @@ export interface PlaceRequest {
   coord: GridCoord;
   /** Top-surface Y from the client's raycast, used by the server to sit models on the plate. */
   surfaceY: number;
+	/** Number of clockwise 90-degree turns (0-3) applied during placement. */
+	rotationQuarterTurns: number;
 }
 
 export interface PlaceResponse {

@@ -17,12 +17,20 @@ export function clearPlayerGrid(player: Player): void {
   cellType.delete(player);
 }
 
-export function gridCoordToWorld(player: Player, coord: GridCoord, machineType: string, surfaceY?: number): CFrame {
+export function gridCoordToWorld(
+  player: Player,
+  coord: GridCoord,
+  machineType: string,
+  surfaceY?: number,
+  rotationQuarterTurns = 0,
+): CFrame {
   const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
   const worldPos = gridCoordToWorldPos(coord, plotCenter, machineType);
   // Use the client's raycast surface Y when available; otherwise fall back to the stored origin Y.
   const worldY = surfaceY ?? plotCenter.Y;
-  const worldCFrame = new CFrame(worldPos.X, worldY, worldPos.Z);
+  const baseCFrame = new CFrame(worldPos.X, worldY, worldPos.Z);
+  const rotation = CFrame.Angles(0, math.rad((rotationQuarterTurns % 4) * 90), 0);
+  const worldCFrame = baseCFrame.mul(rotation);
 
   logger.info(`Player: ${player.Name}, Grid: (${coord.x}, ${coord.z}) -> World: (${worldPos.X}, ${worldY}, ${worldPos.Z})`);
   logger.info(`Plot Center: (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z})`);
