@@ -22,8 +22,8 @@ const plotOwners = new Map<number, Player>();
 const playerPlots = new Map<Player, PlotEntry>();
 
 // Finds the first free slot, creates a Folder at that position,
-// and records ownership in both maps.
-export function assignPlot(player: Player): Folder {
+// and records ownership in both maps. Returns undefined if no slots are free.
+export function assignPlot(player: Player): Folder | undefined {
 	let plotIndex = -1;
 	for (let i = 0; i < PLOT_POSITIONS.size(); i++) {
 		if (!plotOwners.has(i)) {
@@ -33,18 +33,19 @@ export function assignPlot(player: Player): Folder {
 	}
 
 	if (plotIndex === -1) {
-		error(`No free plots available for ${player.Name}`);
+		warn(`No free plots available for ${player.Name}`);
+		return undefined;
 	}
 
 	// Build properties before parenting so the client receives one
 	// replication event, not one per property assignment.
 	const folder = new Instance("Folder");
-	folder.Name = `Plot_${player.UserId}`;
+	// Name plots by slot index rather than by owner to avoid leaking ownership.
+	folder.Name = `Plot_${plotIndex}`;
 
 	// Store the assigned position as an attribute so other server code
 	// (miners, sell zones) can read where this plot's origin is.
 	folder.SetAttribute("PlotPosition", PLOT_POSITIONS[plotIndex]);
-	folder.SetAttribute("OwnerUserId", player.UserId);
 
 	// Parent last — triggers replication.
 	folder.Parent = Workspace;
@@ -83,11 +84,12 @@ export function getPlotPosition(player: Player): Vector3 | undefined {
 }
 
 // Teleports a freshly spawned character to stand above the plot origin.
-// Pass the character from CharacterAdded — WaitForChild blocks until
-// HumanoidRootPart is ready before setting CFrame.
+// WaitForChild uses a timeout so this never hangs indefinitely on edge cases
+// like rapid respawn or character cleanup.
 export function spawnPlayerAtPlot(player: Player, character: Model): void {
 	const pos = getPlotPosition(player);
 	if (!pos) return;
-	const hrp = character.WaitForChild("HumanoidRootPart") as BasePart;
-	hrp.CFrame = new CFrame(pos.add(new Vector3(0, 5, 0)));
+	const hrp = character.WaitForChild("HumanoidRootPart", 5);
+	if (!hrp || !hrp.IsA("BasePart")) return;
+	(hrp as BasePart).CFrame = new CFrame(pos.add(new Vector3(0, 5, 0)));
 }

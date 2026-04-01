@@ -13,8 +13,21 @@ function onPlayerAdded(player: Player) {
 		lastChecked: os.time(),
 	};
 	playerData.set(player, data);
-	assignPlot(player);
+
+	const plot = assignPlot(player);
+	if (!plot) {
+		player.Kick("Server is full — no plots available. Please try again later.");
+		return;
+	}
+
 	player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
+
+	// Handle case where the character already exists (e.g. Studio solo mode)
+	const existingCharacter = player.Character;
+	if (existingCharacter) {
+		spawnPlayerAtPlot(player, existingCharacter);
+	}
+
 	print(`✅ ${player.Name} joined with ${data.coins} coins`);
 }
 
@@ -23,8 +36,8 @@ function onPlayerRemoving(player: Player) {
 	if (data) {
 		print(`💾 Saving ${player.Name}: ${data.coins} coins`);
 		playerData.delete(player);
-		releasePlot(player);
 	}
+	releasePlot(player);
 }
 
 Players.PlayerAdded.Connect(onPlayerAdded);
