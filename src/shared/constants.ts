@@ -22,3 +22,22 @@ export const PLOT_CONFIG = {
 	SPACING: 50,
 	MAX_PLOTS: 10,
 } as const;
+
+// Product configuration
+export const PRODUCT_CONFIG = {
+	woodCube: {
+		lifetime: 30,
+	},
+} as const;
+
+// Conveyor configuration
+export const CONVEYOR_CONFIG = {
+	baseSpeed: 1,
+	updateInterval: 0.016,
+} as const;
+
+// Sell zone configuration
+export const SELL_ZONE_CONFIG = {
+	glowRange: 18,
+	glowBrightness: 2.5,
+} as const;

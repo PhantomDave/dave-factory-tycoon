@@ -1,4 +1,5 @@
-import { ConveyorClass } from "./conveyorClass";
+import { ConveyorClass } from "server/models/conveyors/conveyorClass";
+import { CONVEYOR_CONFIG } from "shared/constants";
 
 export class BaseConveyor extends ConveyorClass {
 	constructor(templateName = "Conveyor") {
@@ -6,6 +7,6 @@ export class BaseConveyor extends ConveyorClass {
 	}
 
 	getSpeed(): number {
-		return 1; // Studs per second
+		return CONVEYOR_CONFIG.baseSpeed;
 	}
 }

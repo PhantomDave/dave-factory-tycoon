@@ -1,7 +1,6 @@
 import { Workspace } from "@rbxts/services";
-import type { Product } from "./Products";
-
-const WOOD_CUBE_LIFETIME = 30;
+import type { Product } from "server/models/products/Products";
+import { PRODUCT_CONFIG } from "shared/constants";
 
 export class WoodCube implements Product {
 	type = "WoodCube" as const;
@@ -26,7 +25,7 @@ export class WoodCube implements Product {
 		woodModel.PivotTo(new CFrame(position));
 		woodModel.Parent = Workspace;
 
-		task.delay(WOOD_CUBE_LIFETIME, () => {
+		task.delay(PRODUCT_CONFIG.woodCube.lifetime, () => {
 			woodModel.Destroy();
 		});
 

@@ -1,5 +1,5 @@
-import { MinerClass } from "./minerClass";
-import { WoodCube } from "../products/woodCube";
+import { MinerClass } from "server/models/miners/minerClass";
+import { WoodCube } from "server/models/products/woodCube";
 import { MINING_CONFIG } from "shared/constants";
 
 export class BaseMiner extends MinerClass {

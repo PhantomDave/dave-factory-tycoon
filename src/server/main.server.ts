@@ -21,14 +21,26 @@ task.spawn(() => {
 	logger.info("Sell zones initialized");
 
 	remotes.BuyUpgrade.OnServerEvent.Connect((player: Player, upgradeId: string) => {
-		onBuyUpgrade(player, upgradeId);
+		try {
+			if (typeIs(upgradeId, "string") && upgradeId.size() > 0) {
+				onBuyUpgrade(player, upgradeId);
+			} else {
+				logger.warn(`${player.Name} sent invalid upgradeId`);
+			}
+		} catch (err) {
+			logger.error(`BuyUpgrade error for ${player.Name}: ${tostring(err)}`);
+		}
 	});
 
 	remotes.SpawnConveyor.OnServerEvent.Connect((player: Player) => {
-		const spawnPos = getPlayerSpawnPosition(player);
+		try {
+			const spawnPos = getPlayerSpawnPosition(player);
 
-		const conveyor = new BaseConveyor();
-		conveyor.spawn(spawnPos);
-		logger.info(`${player.Name} spawned a conveyor`);
+			const conveyor = new BaseConveyor();
+			conveyor.spawn(spawnPos);
+			logger.info(`${player.Name} spawned a conveyor`);
+		} catch (err) {
+			logger.error(`SpawnConveyor error for ${player.Name}: ${tostring(err)}`);
+		}
 	});
 });

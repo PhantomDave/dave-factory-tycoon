@@ -6,32 +6,41 @@ import { logger } from "server/utils/logger";
 export const playerService = new PlayerService();
 
 function onPlayerAdded(player: Player) {
-	playerService.addPlayer(player);
+	try {
+		playerService.addPlayer(player);
 
-	const plot = assignPlot(player);
-	if (!plot) {
-		player.Kick("Server is full — no plots available. Please try again later.");
-		return;
+		const plot = assignPlot(player);
+		if (!plot) {
+			logger.error(`No plots available for ${player.Name}`);
+			player.Kick("Server is full — no plots available. Please try again later.");
+			return;
+		}
+
+		player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
+
+		// Handle case where the character already exists (e.g. Studio solo mode)
+		const existingCharacter = player.Character;
+		if (existingCharacter) {
+			spawnPlayerAtPlot(player, existingCharacter);
+		}
+
+		logger.info(`${player.Name} joined with ${playerService.getBalance(player)} coins`);
+	} catch (err) {
+		logger.error(`Player join error for ${player.Name}: ${tostring(err)}`);
 	}
-
-	player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
-
-	// Handle case where the character already exists (e.g. Studio solo mode)
-	const existingCharacter = player.Character;
-	if (existingCharacter) {
-		spawnPlayerAtPlot(player, existingCharacter);
-	}
-
-	logger.info(`${player.Name} joined with ${playerService.getBalance(player)} coins`);
 }
 
 function onPlayerRemoving(player: Player) {
-	const data = playerService.getPlayer(player);
-	if (data) {
-		logger.info(`Saving ${player.Name}: ${data.coins} coins`);
+	try {
+		const data = playerService.getPlayer(player);
+		if (data) {
+			logger.info(`Saving ${player.Name}: ${data.coins} coins`);
+		}
+		playerService.removePlayer(player);
+		releasePlot(player);
+	} catch (err) {
+		logger.error(`Player leaving error for ${player.Name}: ${tostring(err)}`);
 	}
-	playerService.removePlayer(player);
-	releasePlot(player);
 }
 
 Players.PlayerAdded.Connect(onPlayerAdded);
