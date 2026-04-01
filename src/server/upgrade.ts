@@ -24,9 +24,6 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		return false;
 	}
 
-	// Deduct coins (after all validation)
-	data.coins -= upgrade.cost;
-
 	const remotes = getRemotes();
 
 	// Handle upgrade type
@@ -48,6 +45,8 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		print(`✅ ${player.Name} spawned ${upgrade.displayName}`);
 	}
 
+	// Deduct coins (after all validation)
+	data.coins -= upgrade.cost;
 	// Notify client of balance change
 	remotes.UpdateBalance.FireClient(player, data.coins);
 

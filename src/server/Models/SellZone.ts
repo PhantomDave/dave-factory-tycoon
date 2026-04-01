@@ -5,11 +5,12 @@ import { getRemotes } from "shared/remotes";
 const SELL_ZONE_NAME = "SellZone";
 const PRODUCT_OWNER_ATTRIBUTE = "ProductOwnerUserId";
 const PRODUCT_VALUE_ATTRIBUTE = "ProductValue";
+const PRODUCT_SELLING_ATTRIBUTE = "ProductIsSelling";
 const SELL_ZONE_GLOW_NAME = "SellZoneGlow";
 const SELL_ZONE_DEEP_RED = Color3.fromRGB(120, 0, 0);
 
 export class SellZone {
-	private readonly soldProducts = new Set<Model>();
+    remotes = getRemotes();
 
 	constructor(private readonly zonePart: BasePart) {}
 
@@ -19,26 +20,32 @@ export class SellZone {
 
 	private trySellProduct(hitPart: BasePart): void {
 		const productModel = hitPart.FindFirstAncestorOfClass("Model");
-		if (!productModel || this.soldProducts.has(productModel)) {
+		if (!productModel) {
 			return;
 		}
+
+		const isSelling = productModel.GetAttribute(PRODUCT_SELLING_ATTRIBUTE);
+		if (typeIs(isSelling, "boolean") && isSelling) {
+			return;
+		}
+
+		productModel.SetAttribute(PRODUCT_SELLING_ATTRIBUTE, true);
 
 		const ownerUserId = this.getNumericAttribute(productModel, hitPart, PRODUCT_OWNER_ATTRIBUTE);
 		const productValue = this.getNumericAttribute(productModel, hitPart, PRODUCT_VALUE_ATTRIBUTE);
 		if (ownerUserId === undefined || productValue === undefined || productValue <= 0) {
+			productModel.SetAttribute(PRODUCT_SELLING_ATTRIBUTE, false);
 			return;
 		}
 
 		const owner = Players.GetPlayerByUserId(ownerUserId);
 		if (!owner) {
+			productModel.SetAttribute(PRODUCT_SELLING_ATTRIBUTE, false);
 			return;
 		}
 
-		this.soldProducts.add(productModel);
 		addCoins(owner, productValue);
-
-		const remotes = getRemotes();
-		remotes.UpdateBalance.FireClient(owner, getBalance(owner));
+		this.remotes.UpdateBalance.FireClient(owner, getBalance(owner));
 
 		productModel.Destroy();
 	}
