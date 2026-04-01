@@ -1,5 +1,5 @@
-import { spawnTemplateModel } from "server/Models/spawnUtils";
-import type { Product } from "../Products/Products";
+import { spawnTemplateModel } from "server/models/spawnUtils";
+import type { Product } from "server/models/products/Products";
 
 export abstract class MinerClass {
 	value: number;

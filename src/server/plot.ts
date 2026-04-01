@@ -1,4 +1,5 @@
 import { Workspace } from "@rbxts/services";
+import { logger } from "server/utils/logger";
 
 // One entry per available plot slot. Space plots far enough apart so
 // machines spawned inside them never overlap (100 studs per slot).
@@ -33,7 +34,7 @@ export function assignPlot(player: Player): Folder | undefined {
 	}
 
 	if (plotIndex === -1) {
-		warn(`No free plots available for ${player.Name}`);
+		logger.warn(`No free plots available for ${player.Name}`);
 		return undefined;
 	}
 
@@ -53,7 +54,7 @@ export function assignPlot(player: Player): Folder | undefined {
 	plotOwners.set(plotIndex, player);
 	playerPlots.set(player, { folder, plotIndex });
 
-	print(`✅ Assigned plot ${plotIndex} to ${player.Name}`);
+	logger.info(`Assigned plot ${plotIndex} to ${player.Name}`);
 	return folder;
 }
 
@@ -66,7 +67,7 @@ export function releasePlot(player: Player): void {
 	plotOwners.delete(entry.plotIndex);
 	playerPlots.delete(player);
 
-	print(`🗑️ Released plot ${entry.plotIndex} from ${player.Name}`);
+	logger.info(`Released plot ${entry.plotIndex} from ${player.Name}`);
 }
 
 // Used by other server modules (miners, sell zones) to find the

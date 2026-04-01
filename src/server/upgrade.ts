@@ -1,8 +1,9 @@
 import { UPGRADES } from "shared/types";
-import { getPlayerData } from "./data";
+import { getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
-import { BaseMiner } from "server/Models/Miners/BaseMiner";
-import { getPlayerSpawnPosition, spawnTemplateModel } from "server/Models/spawnUtils";
+import { BaseMiner } from "server/models/miners/baseMiner";
+import { getPlayerSpawnPosition, spawnTemplateModel } from "server/models/spawnUtils";
+import { logger } from "server/utils/logger";
 
 export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	const data = getPlayerData(player);
@@ -14,13 +15,13 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 
 	// Prevent duplicate purchases
 	if (data.unlockedUpgrades.includes(upgradeId)) {
-		print(`❌ ${player.Name} already owns ${upgrade.displayName}`);
+		logger.warn(`${player.Name} already owns ${upgrade.displayName}`);
 		return false;
 	}
 
 	// Validate: has enough coins?
 	if (data.coins < upgrade.cost) {
-		print(`❌ ${player.Name} tried to buy but insufficient funds`);
+		logger.warn(`${player.Name} tried to buy but insufficient funds`);
 		return false;
 	}
 
@@ -30,7 +31,7 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	if (upgrade.type === "multiplier") {
 		data.multiplier += upgrade.multiplier;
 		data.unlockedUpgrades.push(upgradeId);
-		print(`✅ ${player.Name} bought ${upgrade.displayName}`);
+		logger.info(`${player.Name} bought ${upgrade.displayName}`);
 		remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 	} else if (upgrade.type === "spawner") {
 		const spawnPos = getPlayerSpawnPosition(player);
@@ -42,7 +43,7 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		}
 
 		data.unlockedUpgrades.push(upgradeId);
-		print(`✅ ${player.Name} spawned ${upgrade.displayName}`);
+		logger.info(`${player.Name} spawned ${upgrade.displayName}`);
 	}
 
 	// Deduct coins (after all validation)
@@ -52,4 +53,3 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 
 	return true;
 }
-

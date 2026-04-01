@@ -1,5 +1,6 @@
-import { MinerClass } from "./MinerClass";
-import { WoodCube } from "../Products/WoodCube";
+import { MinerClass } from "server/models/miners/minerClass";
+import { WoodCube } from "server/models/products/woodCube";
+import { MINING_CONFIG } from "shared/constants";
 
 export class BaseMiner extends MinerClass {
 	constructor(templateName = "BaseMiner", ownerUserId?: number) {
@@ -7,7 +8,7 @@ export class BaseMiner extends MinerClass {
 	}
 
 	getInterval(): number {
-		return 5;
+		return MINING_CONFIG.BASE_INTERVAL_SECONDS;
 	}
 
 	spawn(position?: Vector3): Model {

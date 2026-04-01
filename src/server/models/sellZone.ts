@@ -1,6 +1,7 @@
 import { Players, Workspace } from "@rbxts/services";
 import { addCoins, getBalance } from "server/data";
 import { getRemotes } from "shared/remotes";
+import { SELL_ZONE_CONFIG } from "shared/constants";
 
 const SELL_ZONE_NAME = "SellZone";
 const PRODUCT_OWNER_ATTRIBUTE = "ProductOwnerUserId";
@@ -72,16 +73,16 @@ function applySellZoneStyle(zonePart: BasePart): void {
 	const existingGlow = zonePart.FindFirstChild(SELL_ZONE_GLOW_NAME);
 	if (existingGlow && existingGlow.IsA("PointLight")) {
 		existingGlow.Color = SELL_ZONE_DEEP_RED;
-		existingGlow.Range = 18;
-		existingGlow.Brightness = 2.5;
+		existingGlow.Range = SELL_ZONE_CONFIG.glowRange;
+		existingGlow.Brightness = SELL_ZONE_CONFIG.glowBrightness;
 		return;
 	}
 
 	const glow = new Instance("PointLight");
 	glow.Name = SELL_ZONE_GLOW_NAME;
 	glow.Color = SELL_ZONE_DEEP_RED;
-	glow.Range = 18;
-	glow.Brightness = 2.5;
+	glow.Range = SELL_ZONE_CONFIG.glowRange;
+	glow.Brightness = SELL_ZONE_CONFIG.glowBrightness;
 	glow.Parent = zonePart;
 }
 

@@ -1,4 +1,6 @@
-import { spawnTemplateModel } from "server/Models/spawnUtils";
+import { spawnTemplateModel } from "server/models/spawnUtils";
+import { logger } from "server/utils/logger";
+import { CONVEYOR_CONFIG } from "shared/constants";
 
 export abstract class ConveyorClass {
 	model: Model;
@@ -32,7 +34,7 @@ export abstract class ConveyorClass {
 	startTransporting(): void {
 		const conveyorSurface = this.getConveyorSurface();
 		if (!conveyorSurface) {
-			warn(`Conveyor '${this.templateName}' has no BasePart to transport items on`);
+			logger.warn(`Conveyor '${this.templateName}' has no BasePart to transport items on`);
 			return;
 		}
 
@@ -58,7 +60,7 @@ export abstract class ConveyorClass {
 					const moveDirection = conveyorSurface.CFrame.LookVector;
 					bodyPart.AssemblyLinearVelocity = moveDirection.mul(this.getSpeed());
 
-					task.wait(0.016); // ~60 FPS
+					task.wait(CONVEYOR_CONFIG.updateInterval); // ~60 FPS
 				}
 
 				this.transportedItems.delete(part);

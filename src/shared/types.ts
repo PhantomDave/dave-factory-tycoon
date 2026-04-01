@@ -1,3 +1,5 @@
+import { UPGRADE_CONFIG } from "shared/constants";
+
 export interface PlayerData {
 	playerId: number;
 	coins: number;
@@ -44,15 +46,15 @@ export const UPGRADES: Record<string, Upgrade> = {
 	},
 	basic_pickaxe: {
 		id: "basic_pickaxe",
-		cost: 10,
-		multiplier: 2,
+		cost: UPGRADE_CONFIG.basicPickaxe.cost,
+		multiplier: UPGRADE_CONFIG.basicPickaxe.multiplier,
 		displayName: "Basic Pickaxe",
 		type: "multiplier",
 	},
 	gold_pickaxe: {
 		id: "gold_pickaxe",
-		cost: 100,
-		multiplier: 5,
+		cost: UPGRADE_CONFIG.goldPickaxe.cost,
+		multiplier: UPGRADE_CONFIG.goldPickaxe.multiplier,
 		displayName: "Gold Pickaxe",
 		type: "multiplier",
 	},
