@@ -23,14 +23,17 @@ export function spawnTemplateModel(templateName: string, position: Vector3 = DEF
 		wrappedPart.Parent = spawnedModel;
 	}
 
-	if (!spawnedModel.PrimaryPart) {
-		spawnedModel.PrimaryPart = spawnedModel.FindFirstChildWhichIsA("BasePart") as BasePart;
+	let primaryPart = spawnedModel.PrimaryPart;
+	if (!primaryPart) {
+		primaryPart = spawnedModel.FindFirstChildWhichIsA("BasePart") as BasePart | undefined;
 	}
 
-	if (spawnedModel.PrimaryPart) {
-		spawnedModel.PivotTo(new CFrame(position));
+	if (!primaryPart) {
+		error(`Template '${templateName}' does not contain a BasePart to use as PrimaryPart`);
 	}
 
+	spawnedModel.PrimaryPart = primaryPart;
+	spawnedModel.PivotTo(new CFrame(position));
 	spawnedModel.Parent = Workspace;
 	return spawnedModel;
 }
