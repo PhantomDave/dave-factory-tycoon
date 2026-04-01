@@ -1,43 +1,46 @@
 import { Players } from "@rbxts/services";
-import { PlayerData } from "shared/types";
 import { assignPlot, releasePlot, spawnPlayerAtPlot } from "server/plot";
+import { PlayerService } from "server/services/playerService";
+import { logger } from "server/utils/logger";
 
-const playerData = new Map<Player, PlayerData>();
+export const playerService = new PlayerService();
 
 function onPlayerAdded(player: Player) {
-	const data: PlayerData = {
-		playerId: player.UserId,
-		coins: 0,
-		multiplier: 1,
-		unlockedUpgrades: [],
-		lastChecked: os.time(),
-	};
-	playerData.set(player, data);
+	try {
+		playerService.addPlayer(player);
 
-	const plot = assignPlot(player);
-	if (!plot) {
-		player.Kick("Server is full — no plots available. Please try again later.");
-		return;
+		const plot = assignPlot(player);
+		if (!plot) {
+			logger.error(`No plots available for ${player.Name}`);
+			player.Kick("Server is full — no plots available. Please try again later.");
+			return;
+		}
+
+		player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
+
+		// Handle case where the character already exists (e.g. Studio solo mode)
+		const existingCharacter = player.Character;
+		if (existingCharacter) {
+			spawnPlayerAtPlot(player, existingCharacter);
+		}
+
+		logger.info(`${player.Name} joined with ${playerService.getBalance(player)} coins`);
+	} catch (err) {
+		logger.error(`Player join error for ${player.Name}: ${tostring(err)}`);
 	}
-
-	player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
-
-	// Handle case where the character already exists (e.g. Studio solo mode)
-	const existingCharacter = player.Character;
-	if (existingCharacter) {
-		spawnPlayerAtPlot(player, existingCharacter);
-	}
-
-	print(`✅ ${player.Name} joined with ${data.coins} coins`);
 }
 
 function onPlayerRemoving(player: Player) {
-	const data = playerData.get(player);
-	if (data) {
-		print(`💾 Saving ${player.Name}: ${data.coins} coins`);
-		playerData.delete(player);
+	try {
+		const data = playerService.getPlayer(player);
+		if (data) {
+			logger.info(`Saving ${player.Name}: ${data.coins} coins`);
+		}
+		playerService.removePlayer(player);
+		releasePlot(player);
+	} catch (err) {
+		logger.error(`Player leaving error for ${player.Name}: ${tostring(err)}`);
 	}
-	releasePlot(player);
 }
 
 Players.PlayerAdded.Connect(onPlayerAdded);
@@ -49,18 +52,14 @@ for (const player of Players.GetPlayers()) {
 	onPlayerAdded(player);
 }
 
-export function getPlayerData(player: Player): PlayerData | undefined {
-	return playerData.get(player);
+export function getPlayerData(player: Player) {
+	return playerService.getPlayer(player);
 }
 
 export function addCoins(player: Player, amount: number): void {
-	const data = getPlayerData(player);
-	if (data) {
-		data.coins += amount;
-	}
+	playerService.addCoins(player, amount);
 }
 
 export function getBalance(player: Player): number {
-	const data = getPlayerData(player);
-	return data ? data.coins : 0;
+	return playerService.getBalance(player);
 }
