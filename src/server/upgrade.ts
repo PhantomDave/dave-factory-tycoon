@@ -2,6 +2,7 @@ import { UPGRADES } from "shared/types";
 import { getPlayerData } from "./data";
 import { getRemotes } from "shared/remotes";
 import { BaseMiner } from "server/Models/Miners/BaseMiner";
+import { getPlayerSpawnPosition, spawnTemplateModel } from "server/Models/spawnUtils";
 
 export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	const data = getPlayerData(player);
@@ -35,13 +36,13 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		print(`✅ ${player.Name} bought ${upgrade.displayName}`);
 		remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 	} else if (upgrade.type === "spawner") {
-		// Spawn the miner at player's character position
-		const char = player.Character;
-		const primaryPart = char?.PrimaryPart;
-		const spawnPos = primaryPart ? primaryPart.Position : new Vector3(0, 0, 0);
-
-		const miner = new BaseMiner(upgrade.spawnerTemplate);
-		miner.spawn(spawnPos);
+		const spawnPos = getPlayerSpawnPosition(player);
+		if (upgrade.spawnerTemplate === "BaseMiner") {
+			const miner = new BaseMiner(upgrade.spawnerTemplate, player.UserId);
+			miner.spawn(spawnPos);
+		} else {
+			spawnTemplateModel(upgrade.spawnerTemplate, spawnPos);
+		}
 
 		data.unlockedUpgrades.push(upgradeId);
 		print(`✅ ${player.Name} spawned ${upgrade.displayName}`);

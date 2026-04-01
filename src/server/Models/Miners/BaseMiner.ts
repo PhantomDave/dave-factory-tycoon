@@ -2,8 +2,8 @@ import { MinerClass } from "./MinerClass";
 import { WoodCube } from "../Products/WoodCube";
 
 export class BaseMiner extends MinerClass {
-	constructor(templateName = "BaseMiner") {
-		super(new WoodCube(), templateName);
+	constructor(templateName = "BaseMiner", ownerUserId?: number) {
+		super(new WoodCube(), templateName, ownerUserId);
 	}
 
 	getInterval(): number {

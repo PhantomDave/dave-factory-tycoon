@@ -1,4 +1,4 @@
-import { ReplicatedStorage, Workspace } from "@rbxts/services";
+import { spawnTemplateModel } from "server/Models/spawnUtils";
 
 export abstract class ConveyorClass {
 	model: Model;
@@ -18,37 +18,7 @@ export abstract class ConveyorClass {
 	}
 
 	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		const template = ReplicatedStorage.FindFirstChild(this.templateName);
-		if (!template || (!template.IsA("Model") && !template.IsA("BasePart"))) {
-			error(`Template '${this.templateName}' not found in ReplicatedStorage or is not a Model/Part`);
-		}
-
-		let spawnedModel: Model;
-
-		if (template.IsA("Model")) {
-			spawnedModel = template.Clone();
-		} else {
-			// If template is a Part, wrap it in a Model
-			const part = template.Clone() as BasePart;
-			spawnedModel = new Instance("Model");
-			spawnedModel.Name = this.templateName;
-			part.Parent = spawnedModel;
-		}
-
-		this.model = spawnedModel;
-
-		// Set PrimaryPart if not set
-		if (!this.model.PrimaryPart) {
-			this.model.PrimaryPart = this.model.FindFirstChildWhichIsA("BasePart") as BasePart;
-		}
-
-		// Use PivotTo for reliable positioning
-		if (this.model.PrimaryPart) {
-			this.model.PivotTo(new CFrame(position));
-		}
-
-		this.model.Parent = Workspace;
-
+		this.model = spawnTemplateModel(this.templateName, position);
 		return this.model;
 	}
 

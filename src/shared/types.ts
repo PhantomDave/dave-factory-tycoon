@@ -34,6 +34,14 @@ export const UPGRADES: Record<string, Upgrade> = {
 		spawnerTemplate: "BaseMiner",
 		spawnerType: "model",
 	},
+	sell_zone_spawner: {
+		id: "sell_zone_spawner",
+		cost: 0,
+		displayName: "Spawn Sell Zone",
+		type: "spawner",
+		spawnerTemplate: "SellZone",
+		spawnerType: "model",
+	},
 	basic_pickaxe: {
 		id: "basic_pickaxe",
 		cost: 10,
