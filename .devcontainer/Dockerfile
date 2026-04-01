@@ -2,9 +2,13 @@ FROM oven/bun:1.3
 
 USER root
 
-# Install utilities required to download and extract rojo
+# Install utilities and developer shell/tools
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+    && apt-get install -y --no-install-recommends curl unzip ca-certificates git fish sudo gh openssh-client \
+    && usermod --shell /usr/bin/fish bun \
+    && usermod -aG sudo bun \
+    && echo "bun ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/bun \
+    && chmod 0440 /etc/sudoers.d/bun \
     && rm -rf /var/lib/apt/lists/*
 
 # Install rojo 7.6.1 (Roblox sync tool)

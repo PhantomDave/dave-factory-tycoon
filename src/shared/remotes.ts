@@ -13,6 +13,7 @@ export interface Remotes {
 	BuyUpgrade: TypedRemoteEvent<[upgradeId: string]>;
 	UpdateBalance: TypedRemoteEvent<[newBalance: number]>;
 	UpdateMultiplier: TypedRemoteEvent<[newMultiplier: number]>;
+	SpawnConveyor: TypedRemoteEvent;
 }
 
 // Create or get RemoteEvents
@@ -41,5 +42,6 @@ export function getRemotes(): Remotes {
 		BuyUpgrade: ensureRemote("BuyUpgrade"),
 		UpdateBalance: ensureRemote("UpdateBalance"),
 		UpdateMultiplier: ensureRemote("UpdateMultiplier"),
+		SpawnConveyor: ensureRemote("SpawnConveyor"),
 	};
 }

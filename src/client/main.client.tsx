@@ -31,6 +31,10 @@ function GameUIWrapper() {
 		remotes.BuyUpgrade.FireServer(upgradeId);
 	};
 
+	const handleSpawnConveyor = () => {
+		remotes.SpawnConveyor.FireServer();
+	};
+
 	return (
 		<GameUI
 			balance={balance}
@@ -38,6 +42,7 @@ function GameUIWrapper() {
 			shopOpen={shopOpen}
 			onToggleShop={handleToggleShop}
 			onBuyUpgrade={handleBuyUpgrade}
+			onSpawnConveyor={handleSpawnConveyor}
 		/>
 	);
 }
