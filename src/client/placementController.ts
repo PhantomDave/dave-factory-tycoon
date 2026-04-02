@@ -9,6 +9,8 @@ enum PlacementState {
 	AWAITING_RESPONSE = "AWAITING_RESPONSE",
 }
 
+const GRID_VISUAL_Y_OFFSET = 1;
+
 class PlacementController {
 	/** Maps "x,z" cell key → machine type string, for adjacency checks. */
 	private occupiedCells = new Map<string, string>();
@@ -224,7 +226,7 @@ class PlacementController {
 				const worldX = plotMinCorner.X + (coord.x + x + 0.5) * GRID_CELL_SIZE;
 				const worldZ = plotMinCorner.Z + (coord.z + z + 0.5) * GRID_CELL_SIZE;
 
-				cell.CFrame = new CFrame(worldX, surfaceY + 0.12, worldZ);
+				cell.CFrame = new CFrame(worldX, surfaceY + GRID_VISUAL_Y_OFFSET + 0.12, worldZ);
 			}
 		}
 	}
@@ -252,8 +254,11 @@ class PlacementController {
 			plotCenter.Y + 100,
 			plotMinCorner.Z + plotSizeStuds / 2,
 		);
-		const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -200, 0));
-		const baseY = probeResult ? probeResult.Position.Y + 0.06 : plotCenter.Y + 0.06;
+		const probeParams = new RaycastParams();
+		probeParams.FilterType = Enum.RaycastFilterType.Exclude;
+		probeParams.FilterDescendantsInstances = Players.LocalPlayer.Character ? [Players.LocalPlayer.Character] : [];
+		const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -200, 0), probeParams);
+		const baseY = probeResult ? probeResult.Position.Y + GRID_VISUAL_Y_OFFSET : plotCenter.Y + GRID_VISUAL_Y_OFFSET;
 
 		const overlayPart = new Instance("Part");
 		overlayPart.Name = "GridOverlay";
@@ -305,8 +310,9 @@ class PlacementController {
 		const cornerSize = 1.2;
 		const cornerY = baseY + 0.05;
 		const cornerColor = Color3.fromRGB(90, 160, 255);
+		const originColor = Color3.fromRGB(255, 210, 60);
 
-		const addCorner = (x: number, z: number) => {
+		const addCorner = (x: number, z: number, color = cornerColor) => {
 			const marker = new Instance("Part");
 			marker.Name = "GridOverlayCorner";
 			marker.Size = new Vector3(cornerSize, 0.08, cornerSize);
@@ -315,13 +321,47 @@ class PlacementController {
 			marker.CanCollide = false;
 			marker.CanQuery = false;
 			marker.Material = Enum.Material.Neon;
-			marker.Color = cornerColor;
-			marker.Transparency = 0.35;
+			marker.Color = color;
+			marker.Transparency = 0.2;
 			marker.CastShadow = false;
 			marker.Parent = overlayPart;
 		};
 
-		addCorner(plotMinCorner.X, plotMinCorner.Z);
+		const originCellMarker = new Instance("Part");
+		originCellMarker.Name = "GridOriginMarker";
+		originCellMarker.Size = new Vector3(GRID_CELL_SIZE * 0.85, 0.1, GRID_CELL_SIZE * 0.85);
+		originCellMarker.CFrame = new CFrame(
+			plotMinCorner.X + GRID_CELL_SIZE / 2,
+			baseY + 0.06,
+			plotMinCorner.Z + GRID_CELL_SIZE / 2,
+		);
+		originCellMarker.Anchored = true;
+		originCellMarker.CanCollide = false;
+		originCellMarker.CanQuery = false;
+		originCellMarker.Material = Enum.Material.Neon;
+		originCellMarker.Color = originColor;
+		originCellMarker.Transparency = 0.15;
+		originCellMarker.CastShadow = false;
+		originCellMarker.Parent = overlayPart;
+
+		const originBillboard = new Instance("BillboardGui");
+		originBillboard.Name = "GridOriginLabel";
+		originBillboard.Size = new UDim2(0, 64, 0, 28);
+		originBillboard.StudsOffset = new Vector3(0, 1.5, 0);
+		originBillboard.AlwaysOnTop = true;
+		originBillboard.Parent = originCellMarker;
+
+		const originText = new Instance("TextLabel");
+		originText.Size = new UDim2(1, 0, 1, 0);
+		originText.BackgroundTransparency = 1;
+		originText.Text = "(0,0)";
+		originText.TextColor3 = originColor;
+		originText.TextStrokeTransparency = 0.2;
+		originText.TextScaled = true;
+		originText.Font = Enum.Font.GothamBold;
+		originText.Parent = originBillboard;
+
+		addCorner(plotMinCorner.X, plotMinCorner.Z, originColor);
 		addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z);
 		addCorner(plotMinCorner.X, plotMinCorner.Z + plotSizeStuds);
 		addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z + plotSizeStuds);
@@ -335,6 +375,36 @@ class PlacementController {
 			this.gridOverlay.Destroy();
 			this.gridOverlay = undefined;
 		}
+	}
+
+	private resolveBuildPlotCenter(anchor: Vector3): Vector3 {
+		let bestPart: BasePart | undefined;
+		let bestDistance = math.huge;
+		const plotSizeStuds = PLOT_SIZE * GRID_CELL_SIZE;
+
+		for (const descendant of Workspace.GetDescendants()) {
+			if (!descendant.IsA("BasePart") || !descendant.Anchored || descendant.Size.Y > 5) {
+				continue;
+			}
+
+			const matchesX = math.abs(descendant.Size.X - plotSizeStuds) <= 6;
+			const matchesZ = math.abs(descendant.Size.Z - plotSizeStuds) <= 6;
+			if (!matchesX || !matchesZ) {
+				continue;
+			}
+
+			const dx = descendant.Position.X - anchor.X;
+			const dz = descendant.Position.Z - anchor.Z;
+			const horizontalDistance = math.sqrt(dx * dx + dz * dz);
+			if (horizontalDistance > 80 || horizontalDistance >= bestDistance) {
+				continue;
+			}
+
+			bestPart = descendant;
+			bestDistance = horizontalDistance;
+		}
+
+		return bestPart?.Position ?? anchor;
 	}
 
 	private getPlotOrigin(): Vector3 | undefined {
@@ -353,12 +423,14 @@ class PlacementController {
 		}
 
 		const position = plotFolder.GetAttribute("PlotPosition") as Vector3 | undefined;
-		if (!position) {
-			warn("Plot folder missing PlotPosition attribute");
+		const spawnPosition = plotFolder.GetAttribute("PlotSpawnPosition") as Vector3 | undefined;
+		const fallback = position ?? spawnPosition;
+		if (!fallback) {
+			warn("Plot folder missing plot position attributes");
 			return undefined;
 		}
 
-		return position;
+		return this.resolveBuildPlotCenter(fallback);
 	}
 
 	private worldToGrid(worldPos: Vector3, plotOrigin: Vector3): GridCoord {
