@@ -24,33 +24,43 @@ export abstract class MinerClass {
 
 	getSpawnPosition(): Vector3 {
 		const [boundingCf, boundingSize] = this.model.GetBoundingBox();
+		const pivot = this.model.GetPivot();
 
-		// Spawn just above the top surface so the product clears the miner and falls freely.
-		const topY = boundingCf.Position.Y + boundingSize.Y / 2 + 1;
+		// Spawn one stud above the placement level, not above the miner's top.
+		const spawnY = boundingCf.Position.Y - boundingSize.Y / 2 + 1;
 
 		if (this.dropSide === "top") {
-			return new Vector3(boundingCf.Position.X, topY, boundingCf.Position.Z);
+			return new Vector3(pivot.Position.X, spawnY, pivot.Position.Z);
 		}
 
 		// Offset horizontally to the center of the adjacent grid cell beyond the miner's edge.
 		const sideReach = boundingSize.X / 2 + GRID_CELL_SIZE / 2;
 		const lookReach = boundingSize.Z / 2 + GRID_CELL_SIZE / 2;
 
-		// Use the model's orientation so rotated miners still eject in the correct local direction.
-		const right = boundingCf.RightVector;
-		const look = boundingCf.LookVector;
+		// Use the model pivot orientation so rotated miners eject in the correct direction.
+		const right = pivot.RightVector;
+		const look = pivot.LookVector;
 
 		let offset: Vector3;
 		switch (this.dropSide) {
-			case "right": offset = right.mul(sideReach); break;
-			case "left":  offset = right.mul(-sideReach); break;
-			case "front": offset = look.mul(lookReach); break;
-			case "back":  offset = look.mul(-lookReach); break;
-			default:      offset = new Vector3(0, 0, 0);
+			case "right":
+				offset = right.mul(sideReach);
+				break;
+			case "left":
+				offset = right.mul(-sideReach);
+				break;
+			case "front":
+				offset = look.mul(lookReach);
+				break;
+			case "back":
+				offset = look.mul(-lookReach);
+				break;
+			default:
+				offset = new Vector3(0, 0, 0);
 		}
 
-		const pos = boundingCf.Position.add(offset);
-		return new Vector3(pos.X, topY, pos.Z);
+		const pos = pivot.Position.add(offset);
+		return new Vector3(pos.X, spawnY, pos.Z);
 	}
 
 	spawnProduct(position: Vector3 = new Vector3(0, 0, 0)): Model {

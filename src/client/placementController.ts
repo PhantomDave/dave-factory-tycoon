@@ -30,8 +30,10 @@ class PlacementController {
 	private ghostHeightOffset = 0;
 	/** Bounding box size of the ghost, computed once per ghost in createGhostModel. */
 	private ghostBBSize?: Vector3;
-	/** Neon indicator showing which side products will drop from (miners only). */
+	/** Neon arrow showing which side products will drop from (miners only). */
 	private dropSideIndicator?: Part;
+	/** Cube marker showing the exact preview spawn position for miner drops. */
+	private dropSpawnMarker?: Part;
 	/** Per-cell neon highlight parts showing the current footprint state. */
 	private cellHighlights: Part[] = [];
 	/** Number of clockwise 90-degree turns applied to the current ghost. */
@@ -105,9 +107,10 @@ class PlacementController {
 		this.ghostHeightOffset = 1000 - bbBottom;
 		this.ghostBBSize = bbSize;
 
-		// For miners, add a neon indicator showing the drop side.
+		// For miners, add a visible arrow + cube showing the current product drop preview.
 		if (machineType === "BaseMiner") {
 			this.dropSideIndicator = this.createDropSideIndicator();
+			this.dropSpawnMarker = this.createDropSpawnMarker();
 		}
 
 		this.createCellHighlights(machineType);
@@ -116,14 +119,48 @@ class PlacementController {
 	private createDropSideIndicator(): Part {
 		const part = new Instance("Part");
 		part.Name = "DropSideIndicator";
-		part.Size = new Vector3(0.4, 0.4, GRID_CELL_SIZE * 0.8);
+		part.Size = new Vector3(0.22, 0.22, GRID_CELL_SIZE * 0.8);
 		part.Anchored = true;
 		part.CanCollide = false;
+		part.CanQuery = false;
 		part.Material = Enum.Material.Neon;
-		part.Color = Color3.fromRGB(255, 160, 0);
-		part.Transparency = 0.1;
+		part.Color = Color3.fromRGB(255, 170, 40);
+		part.Transparency = 0.05;
 		part.CastShadow = false;
-		part.Parent = this.ghostModel;
+		part.Parent = Workspace;
+		return part;
+	}
+
+	private createDropSpawnMarker(): Part {
+		const part = new Instance("Part");
+		part.Name = "DropSpawnMarker";
+		part.Size = new Vector3(0.55, 0.55, 0.55);
+		part.Anchored = true;
+		part.CanCollide = false;
+		part.CanQuery = false;
+		part.Material = Enum.Material.Neon;
+		part.Color = Color3.fromRGB(255, 225, 80);
+		part.Transparency = 0.05;
+		part.CastShadow = false;
+		part.Parent = Workspace;
+
+		const billboard = new Instance("BillboardGui");
+		billboard.Name = "RotateHint";
+		billboard.Size = new UDim2(0, 120, 0, 36);
+		billboard.StudsOffset = new Vector3(0, 1.15, 0);
+		billboard.AlwaysOnTop = true;
+		billboard.Parent = part;
+
+		const label = new Instance("TextLabel");
+		label.Size = new UDim2(1, 0, 1, 0);
+		label.BackgroundTransparency = 1;
+		label.Text = "[R] Rotate Drop";
+		label.TextColor3 = Color3.fromRGB(255, 225, 80);
+		label.TextStrokeTransparency = 0.15;
+		label.TextScaled = true;
+		label.Font = Enum.Font.GothamBold;
+		label.Parent = billboard;
+
 		return part;
 	}
 
@@ -236,7 +273,10 @@ class PlacementController {
 			this.ghostModel.Destroy();
 			this.ghostModel = undefined;
 		}
+		this.dropSideIndicator?.Destroy();
 		this.dropSideIndicator = undefined;
+		this.dropSpawnMarker?.Destroy();
+		this.dropSpawnMarker = undefined;
 		this.ghostBBSize = undefined;
 		this.ghostHeightOffset = 0;
 		this.destroyCellHighlights();
@@ -481,78 +521,66 @@ class PlacementController {
 	}
 
 	/**
-	 * Mirrors the server-side logic from grid.getAdjacentDropSide.
-	 * Scans adjacent cells for a conveyor and returns the DropSide toward it.
+	 * The miner always drops from its local front.
+	 * Rotating the ghost changes the world-space drop point automatically.
 	 */
-	private getAutoDropSide(coord: GridCoord, machineType: string): DropSide {
-		const size = MACHINE_SIZES[machineType];
-		if (!size) return this.getRotationDropSide();
-
-		const isConveyor = (x: number, z: number) => this.occupiedCells.get(`${x},${z}`) === "Conveyor";
-
-		for (let z = 0; z < size.height; z++) {
-			if (isConveyor(coord.x + size.width, coord.z + z)) return "right";
-		}
-		for (let z = 0; z < size.height; z++) {
-			if (isConveyor(coord.x - 1, coord.z + z)) return "left";
-		}
-		for (let x = 0; x < size.width; x++) {
-			if (isConveyor(coord.x + x, coord.z + size.height)) return "back";
-		}
-		for (let x = 0; x < size.width; x++) {
-			if (isConveyor(coord.x + x, coord.z - 1)) return "front";
-		}
-
-		return this.getRotationDropSide();
+	private getAutoDropSide(_coord: GridCoord, _machineType: string): DropSide {
+		return "front";
 	}
 
-	private getRotationDropSide(): DropSide {
-		switch (this.rotationQuarterTurns % 4) {
-			case 1:
-				return "right";
-			case 2:
-				return "back";
-			case 3:
-				return "left";
-			default:
-				return "front";
-		}
-	}
-
-	/** Updates the neon indicator to show the current auto drop side. */
+	/** Updates the rotatable arrow + cube so players can see the miner's drop spawn point. */
 	private updateDropSideIndicator(): void {
-		if (!this.dropSideIndicator || !this.ghostModel || !this.currentGridCoord || !this.currentMachineType) return;
+		if (
+			!this.dropSideIndicator ||
+			!this.dropSpawnMarker ||
+			!this.ghostModel ||
+			!this.currentGridCoord ||
+			!this.currentMachineType
+		) {
+			return;
+		}
 
 		const [bbCf, bbSize] = this.ghostModel.GetBoundingBox();
+		const pivot = this.ghostModel.GetPivot();
 		const side = this.getAutoDropSide(this.currentGridCoord, this.currentMachineType);
+		const spawnY = bbCf.Position.Y - bbSize.Y / 2 + 1;
+		const previewOrigin = new Vector3(pivot.Position.X, spawnY, pivot.Position.Z);
+		const right = pivot.RightVector;
+		const look = pivot.LookVector;
+		const sideReach = bbSize.X / 2 + GRID_CELL_SIZE / 2;
+		const lookReach = bbSize.Z / 2 + GRID_CELL_SIZE / 2;
 
-		const cx = bbCf.Position.X;
-		const cy = bbCf.Position.Y; // BB center
-		const cz = bbCf.Position.Z;
-		const halfX = bbSize.X / 2 + GRID_CELL_SIZE / 2;
-		const halfZ = bbSize.Z / 2 + GRID_CELL_SIZE / 2;
-		const barLen = GRID_CELL_SIZE * 0.8;
-
+		let spawnPos = previewOrigin;
 		switch (side) {
 			case "right":
-				this.dropSideIndicator.Size = new Vector3(barLen, 0.4, 0.4);
-				this.dropSideIndicator.CFrame = new CFrame(cx + halfX, cy, cz);
+				spawnPos = previewOrigin.add(right.mul(sideReach));
 				break;
 			case "left":
-				this.dropSideIndicator.Size = new Vector3(barLen, 0.4, 0.4);
-				this.dropSideIndicator.CFrame = new CFrame(cx - halfX, cy, cz);
-				break;
-			case "back":
-				this.dropSideIndicator.Size = new Vector3(0.4, 0.4, barLen);
-				this.dropSideIndicator.CFrame = new CFrame(cx, cy, cz + halfZ);
+				spawnPos = previewOrigin.add(right.mul(-sideReach));
 				break;
 			case "front":
-				this.dropSideIndicator.Size = new Vector3(0.4, 0.4, barLen);
-				this.dropSideIndicator.CFrame = new CFrame(cx, cy, cz - halfZ);
+				spawnPos = previewOrigin.add(look.mul(lookReach));
 				break;
-			default: // top — show a vertical bar above the miner
-				this.dropSideIndicator.Size = new Vector3(0.4, barLen, 0.4);
-				this.dropSideIndicator.CFrame = new CFrame(cx, bbCf.Position.Y + bbSize.Y / 2 + barLen / 2, cz);
+			case "back":
+				spawnPos = previewOrigin.add(look.mul(-lookReach));
+				break;
+			default:
+				spawnPos = previewOrigin;
+		}
+
+		this.dropSpawnMarker.CFrame = new CFrame(spawnPos);
+
+		const arrowVector = spawnPos.sub(previewOrigin);
+		if (arrowVector.Magnitude > 0.05) {
+			const shaftLength = math.max(arrowVector.Magnitude - this.dropSpawnMarker.Size.Z / 2, 0.3);
+			const shaftMidpoint = previewOrigin.add(arrowVector.Unit.mul(shaftLength / 2));
+			this.dropSideIndicator.Size = new Vector3(0.22, 0.22, shaftLength);
+			this.dropSideIndicator.CFrame = CFrame.lookAt(shaftMidpoint, spawnPos);
+			this.dropSideIndicator.Transparency = 0.05;
+		} else {
+			this.dropSideIndicator.Size = new Vector3(0.22, 0.22, 0.22);
+			this.dropSideIndicator.CFrame = new CFrame(previewOrigin);
+			this.dropSideIndicator.Transparency = 0.35;
 		}
 	}
 
@@ -608,8 +636,11 @@ class PlacementController {
 
 		const raycastParams = new RaycastParams();
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
-		// Exclude the ghost and cell highlights so the ray hits the plate, not our own parts.
-		raycastParams.FilterDescendantsInstances = [this.ghostModel, ...this.cellHighlights];
+		// Exclude the ghost and preview markers so the ray hits the plate, not our own parts.
+		const filterInstances = [this.ghostModel, ...this.cellHighlights] as Instance[];
+		if (this.dropSideIndicator) filterInstances.push(this.dropSideIndicator);
+		if (this.dropSpawnMarker) filterInstances.push(this.dropSpawnMarker);
+		raycastParams.FilterDescendantsInstances = filterInstances;
 
 		const raycastResult = Workspace.Raycast(unitRay.Origin, unitRay.Direction.mul(1000), raycastParams);
 
@@ -637,11 +668,20 @@ class PlacementController {
 		if (!this.ghostModel) return;
 
 		const color = isValid ? Color3.fromRGB(0, 255, 0) : Color3.fromRGB(255, 0, 0);
+		const accent = isValid ? Color3.fromRGB(255, 170, 40) : Color3.fromRGB(255, 110, 110);
+		const markerColor = isValid ? Color3.fromRGB(255, 225, 80) : Color3.fromRGB(255, 140, 140);
 
 		for (const descendant of this.ghostModel.GetDescendants()) {
-			if (descendant.IsA("BasePart") && descendant !== this.dropSideIndicator) {
+			if (descendant.IsA("BasePart")) {
 				descendant.Color = color;
 			}
+		}
+
+		if (this.dropSideIndicator) {
+			this.dropSideIndicator.Color = accent;
+		}
+		if (this.dropSpawnMarker) {
+			this.dropSpawnMarker.Color = markerColor;
 		}
 	}
 
@@ -656,7 +696,10 @@ class PlacementController {
 
 		const raycastParams = new RaycastParams();
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
-		raycastParams.FilterDescendantsInstances = [this.ghostModel, ...this.cellHighlights];
+		const filterInstances = [this.ghostModel, ...this.cellHighlights] as Instance[];
+		if (this.dropSideIndicator) filterInstances.push(this.dropSideIndicator);
+		if (this.dropSpawnMarker) filterInstances.push(this.dropSpawnMarker);
+		raycastParams.FilterDescendantsInstances = filterInstances;
 
 		const raycastResult = Workspace.Raycast(unitRay.Origin, unitRay.Direction.mul(1000), raycastParams);
 

@@ -1,6 +1,6 @@
 import { Workspace } from "@rbxts/services";
 import { getPlayerData } from "server/data";
-import { getAdjacentDropSide, gridCoordToWorld, occupyCell, validatePlacement } from "server/grid";
+import { gridCoordToWorld, occupyCell, validatePlacement } from "server/grid";
 import { BaseConveyor } from "server/models/conveyors/baseConveyor";
 import { BaseMiner } from "server/models/miners/baseMiner";
 import { spawnTemplateModel } from "server/models/spawnUtils";
@@ -8,23 +8,10 @@ import { getPlayerPlot, getPlotPosition } from "server/plot";
 import { logger } from "server/utils/logger";
 import { MINING_CONFIG } from "shared/constants";
 import { getRemotes } from "shared/remotes";
-import { DropSide, GridCoord, PlaceRequest, UPGRADES } from "shared/types";
+import { PlaceRequest, UPGRADES } from "shared/types";
 
 const MAX_MACHINES_PER_PLOT = 100;
 const MAX_SURFACE_OFFSET = 6;
-
-function sideFromRotation(rotationQuarterTurns: number): DropSide {
-	switch (rotationQuarterTurns % 4) {
-		case 1:
-			return "right";
-		case 2:
-			return "back";
-		case 3:
-			return "left";
-		default:
-			return "front";
-	}
-}
 
 function getSpawnerUpgradeId(machineType: string): string | undefined {
 	for (const [upgradeId, upgrade] of pairs(UPGRADES)) {
@@ -117,7 +104,7 @@ export function initPlacementHandler(): void {
 
 		const safeSurfaceY = getSafeSurfaceY(player, plotFolder, surfaceY);
 		const worldCFrame = gridCoordToWorld(player, coord, machineType, safeSurfaceY, rotationQuarterTurns);
-		const spawned = spawnMachine(machineType, player, coord, worldCFrame, plotFolder, rotationQuarterTurns);
+		const spawned = spawnMachine(machineType, player, worldCFrame, plotFolder);
 		if (!spawned) {
 			remotes.PlaceResponse.FireClient(player, { success: false, reason: "Unknown machine type" });
 			return;
@@ -128,18 +115,10 @@ export function initPlacementHandler(): void {
 	});
 }
 
-function spawnMachine(
-	machineType: string,
-	player: Player,
-	coord: GridCoord,
-	cframe: CFrame,
-	plotFolder: Folder,
-	rotationQuarterTurns: number,
-): boolean {
+function spawnMachine(machineType: string, player: Player, cframe: CFrame, plotFolder: Folder): boolean {
 	if (machineType === "BaseMiner") {
 		const miner = new BaseMiner("BaseMiner", player.UserId);
-		const adjacent = getAdjacentDropSide(player, coord, machineType);
-		miner.dropSide = adjacent === "top" ? sideFromRotation(rotationQuarterTurns) : adjacent;
+		miner.dropSide = "front";
 		miner.spawn(cframe, plotFolder);
 		return true;
 	}
