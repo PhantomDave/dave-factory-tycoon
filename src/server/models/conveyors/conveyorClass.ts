@@ -27,6 +27,7 @@ export abstract class ConveyorClass {
 
 	spawn(cframe: CFrame, parent: Instance): void {
 		this.spawnModel(cframe, parent);
+		this.startTransporting();
 	}
 
 	startTransporting(): void {
@@ -50,7 +51,9 @@ export abstract class ConveyorClass {
 			this.transportedItems.set(part, true);
 
 			task.spawn(() => {
-				const humanoidRootPart = (part.Parent as Model)?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+				const humanoidRootPart = (part.Parent as Model)?.FindFirstChild("HumanoidRootPart") as
+					| BasePart
+					| undefined;
 				const bodyPart = humanoidRootPart ?? part;
 
 				// Transport the item along the conveyor
