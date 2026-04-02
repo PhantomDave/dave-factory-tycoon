@@ -1,20 +1,46 @@
-You are working on a Roblox tycoon project built with roblox-ts.
+You are working on **Dave Factory Tycoon** — a Roblox tycoon prototype built with roblox-ts.
 
-Project architecture:
+## Architecture
 
-- Server logic in src/server
-- Client and UI in src/client
-- Shared contracts in src/shared
+- `src/server/` — authoritative game logic, all state mutation, model spawning
+- `src/client/` — UI, input handling, local-only effects (React via @rbxts/react)
+- `src/shared/` — types, constants, remotes (no Roblox service calls)
 
-Rules:
+Never cross these boundaries. `shared/` imports from neither `server/` nor `client/`.
 
-- Keep remotes typed and aligned with shared contracts.
-- Prefer small composable functions.
-- Avoid changing balance/economy constants unless explicitly asked.
-- Do not introduce any/unknown where typed alternatives exist.
-- Keep PR-sized changes focused and reviewable.
+## Key Files
 
-Validation:
+- `shared/types.ts` — PlayerData, Upgrade, UPGRADES registry, PlaceRequest/Response
+- `shared/constants.ts` — MINING_CONFIG, UPGRADE_CONFIG, PLOT_CONFIG, CONVEYOR_CONFIG, SELL_ZONE_CONFIG
+- `shared/remotes.ts` — getRemotes() typed factory; the ONLY place RemoteEvents are created
+- `server/main.server.ts` — entry point; wires remote listeners, sell zones, placement handler
+- `server/upgrade.ts` — onBuyUpgrade(player, upgradeId); canonical upgrade flow
+- `server/data.ts` — getPlayerData(); in-memory PlayerData per player
+- `server/models/miners/baseMiner.ts` — reference miner; extends MinerClass
+- `server/models/miners/minerClass.ts` — abstract MinerClass: startMining / stopMining
+- `server/requests/placement.ts` — PlaceRequest handler; validates grid, spawns model
+- `client/placementController.ts` — ghost preview, click-to-place logic
+- `client/ui/components/UpgradeShop.tsx` — shop panel; pattern for new UI panels
 
-- Run npm run build after code changes.
-- Report Roblox Studio manual checks required.
+## Remotes (all in shared/remotes.ts)
+
+- PlayerJoined: Server → Client (no payload)
+- BuyUpgrade: Client → Server (upgradeId: string)
+- UpdateBalance: Server → Client (newBalance: number)
+- UpdateMultiplier: Server → Client (newMultiplier: number)
+- PlaceRequest: Client → Server (PlaceRequest object)
+- PlaceResponse: Server → Client (PlaceResponse object)
+
+## Rules
+
+- Use absolute imports: `shared/remotes`, `server/data` (tsconfig baseUrl: "src")
+- Reference constants by name from shared/constants.ts — no magic numbers
+- Use logger from server/utils/logger — never print() or warn() directly
+- Prefer small composable functions; see upgrade.ts and baseMiner.ts for patterns
+- No any/unknown where typed alternatives exist (strict: true enforced)
+- Do NOT change UPGRADE_CONFIG or MINING_CONFIG unless balance tuning is requested
+- Do NOT rename remotes without updating both sides
+
+## Validation
+
+Run `npm run build` after changes. Report any manual Roblox Studio steps needed.
