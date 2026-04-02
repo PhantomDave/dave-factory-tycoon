@@ -8,7 +8,7 @@ interface GameUIProps {
 	shopOpen: boolean;
 	onToggleShop: () => void;
 	onBuyUpgrade: (upgradeId: string) => void;
-	onSpawnConveyor: () => void;
+	onStartPlacement: (machineType: string) => void;
 }
 
 export const GameUI: React.FC<GameUIProps> = ({
@@ -17,7 +17,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 	shopOpen,
 	onToggleShop,
 	onBuyUpgrade,
-	onSpawnConveyor,
+	onStartPlacement,
 }) => {
 	return (
 		<screengui ResetOnSpawn={false}>
@@ -53,19 +53,7 @@ export const GameUI: React.FC<GameUIProps> = ({
 					Activated: onToggleShop,
 				}}
 			/>
-			<textbutton
-				Size={new UDim2(0, 250, 0, 50)}
-				Position={new UDim2(0, 20, 0, 240)}
-				BackgroundColor3={Color3.fromRGB(200, 100, 200)}
-				TextColor3={Color3.fromRGB(255, 255, 255)}
-				TextSize={22}
-				Font={Enum.Font.GothamBold}
-				Text="Spawn Conveyor"
-				Event={{
-					Activated: onSpawnConveyor,
-				}}
-			/>
-			{shopOpen && <UpgradeShop balance={balance} onBuyUpgrade={onBuyUpgrade} />}
+			{shopOpen && <UpgradeShop balance={balance} onBuyUpgrade={onBuyUpgrade} onStartPlacement={onStartPlacement} />}
 		</screengui>
 	);
 };

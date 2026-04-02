@@ -1,5 +1,7 @@
 import { spawnTemplateModel } from "server/models/spawnUtils";
 import type { Product } from "server/models/products/Products";
+import { GRID_CELL_SIZE } from "shared/types";
+import type { DropSide } from "shared/types";
 
 export abstract class MinerClass {
 	value: number;
@@ -7,6 +9,8 @@ export abstract class MinerClass {
 	templateName: string;
 	product: Product;
 	ownerUserId?: number;
+	/** Which side of the miner products are ejected toward. Defaults to "top". */
+	dropSide: DropSide = "top";
 
 	constructor(product: Product, templateName = "BaseMiner", ownerUserId?: number) {
 		this.value = 0;
@@ -19,10 +23,44 @@ export abstract class MinerClass {
 	abstract getInterval(): number;
 
 	getSpawnPosition(): Vector3 {
-		if (this.model.PrimaryPart) {
-			return this.model.PrimaryPart.Position.add(new Vector3(0, 5, 0));
+		const [boundingCf, boundingSize] = this.model.GetBoundingBox();
+		const pivot = this.model.GetPivot();
+
+		// Spawn one stud above the placement level, not above the miner's top.
+		const spawnY = boundingCf.Position.Y - boundingSize.Y / 2 + 1;
+
+		if (this.dropSide === "top") {
+			return new Vector3(pivot.Position.X, spawnY, pivot.Position.Z);
 		}
-		return new Vector3(0, 0, 0);
+
+		// Offset horizontally to the center of the adjacent grid cell beyond the miner's edge.
+		const sideReach = boundingSize.X / 2 + GRID_CELL_SIZE / 2;
+		const lookReach = boundingSize.Z / 2 + GRID_CELL_SIZE / 2;
+
+		// Use the model pivot orientation so rotated miners eject in the correct direction.
+		const right = pivot.RightVector;
+		const look = pivot.LookVector;
+
+		let offset: Vector3;
+		switch (this.dropSide) {
+			case "right":
+				offset = right.mul(sideReach);
+				break;
+			case "left":
+				offset = right.mul(-sideReach);
+				break;
+			case "front":
+				offset = look.mul(lookReach);
+				break;
+			case "back":
+				offset = look.mul(-lookReach);
+				break;
+			default:
+				offset = new Vector3(0, 0, 0);
+		}
+
+		const pos = pivot.Position.add(offset);
+		return new Vector3(pos.X, spawnY, pos.Z);
 	}
 
 	spawnProduct(position: Vector3 = new Vector3(0, 0, 0)): Model {
@@ -41,15 +79,14 @@ export abstract class MinerClass {
 		return spawnedProduct;
 	}
 
-	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		const spawnedModel = spawnTemplateModel(this.templateName, position);
+	spawnModel(cframe: CFrame, parent: Instance): Model {
+		const spawnedModel = spawnTemplateModel(this.templateName, cframe, parent);
 		this.model = spawnedModel;
 		return this.model;
 	}
 
-	spawn(position?: Vector3): Model {
-		const finalPos = position ?? new Vector3(0, 0, 0);
-		return this.spawnModel(finalPos);
+	spawn(cframe: CFrame, parent: Instance): void {
+		this.spawnModel(cframe, parent);
 	}
 
 	startMining(): void {

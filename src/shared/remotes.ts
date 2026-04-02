@@ -1,4 +1,5 @@
 import { ReplicatedStorage } from "@rbxts/services";
+import { PlaceRequest, PlaceResponse } from "./types";
 
 type TypedRemoteEvent<TArgs extends defined[] = []> = RemoteEvent & {
 	FireServer: (...args: TArgs) => void;
@@ -13,10 +14,10 @@ export interface Remotes {
 	BuyUpgrade: TypedRemoteEvent<[upgradeId: string]>;
 	UpdateBalance: TypedRemoteEvent<[newBalance: number]>;
 	UpdateMultiplier: TypedRemoteEvent<[newMultiplier: number]>;
-	SpawnConveyor: TypedRemoteEvent;
+	PlaceRequest: TypedRemoteEvent<[request: PlaceRequest]>;
+	PlaceResponse: TypedRemoteEvent<[response: PlaceResponse]>;
 }
 
-// Create or get RemoteEvents
 export function getRemotes(): Remotes {
 	let remotes = ReplicatedStorage.FindFirstChild("Remotes");
 	if (!remotes) {
@@ -42,6 +43,7 @@ export function getRemotes(): Remotes {
 		BuyUpgrade: ensureRemote("BuyUpgrade"),
 		UpdateBalance: ensureRemote("UpdateBalance"),
 		UpdateMultiplier: ensureRemote("UpdateMultiplier"),
-		SpawnConveyor: ensureRemote("SpawnConveyor"),
+		PlaceRequest: ensureRemote("PlaceRequest"),
+		PlaceResponse: ensureRemote("PlaceResponse"),
 	};
 }

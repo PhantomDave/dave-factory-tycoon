@@ -5,9 +5,10 @@ import { UPGRADES } from "shared/types";
 export interface UpgradeShopProps {
 	balance: number;
 	onBuyUpgrade: (upgradeId: string) => void;
+	onStartPlacement: (machineType: string) => void;
 }
 
-export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade }) => {
+export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade, onStartPlacement }) => {
     const upgrades = new Array<(typeof UPGRADES)[keyof typeof UPGRADES]>();
     for (const [, upgrade] of pairs(UPGRADES)) {
         upgrades.push(upgrade);
@@ -48,10 +49,16 @@ export const UpgradeShop: React.FC<UpgradeShopProps> = ({ balance, onBuyUpgrade 
 							Size={new UDim2(1, 0, 0, 25)}
 							Position={new UDim2(0, 0, 0, 45)}
 							BackgroundColor3={canAfford ? Color3.fromRGB(0, 200, 100) : Color3.fromRGB(100, 100, 100)}
-							Text={canAfford ? "Buy" : "Not Enough $"}
+							Text={canAfford ? (upgrade.type === "spawner" ? "Place" : "Buy") : "Not Enough $"}
 							Active={canAfford}
 							Event={{
-								Activated: () => onBuyUpgrade(upgrade.id),
+								Activated: () => {
+									if (upgrade.type === "spawner") {
+										onStartPlacement(upgrade.spawnerTemplate);
+									} else {
+										onBuyUpgrade(upgrade.id);
+									}
+								},
 							}}
 						/>
 					</frame>

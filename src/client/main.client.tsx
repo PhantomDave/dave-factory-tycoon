@@ -3,6 +3,7 @@ import { getRemotes } from "shared/remotes";
 import React, { StrictMode, useState } from "@rbxts/react";
 import { createPortal, createRoot } from "@rbxts/react-roblox";
 import { GameUI } from "./ui/components/GameUI";
+import { placementController } from "./placementController";
 
 const player = Players.LocalPlayer;
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui;
@@ -31,8 +32,8 @@ function GameUIWrapper() {
 		remotes.BuyUpgrade.FireServer(upgradeId);
 	};
 
-	const handleSpawnConveyor = () => {
-		remotes.SpawnConveyor.FireServer();
+	const handleStartPlacement = (machineType: string) => {
+		placementController.beginPlacing(machineType);
 	};
 
 	return (
@@ -42,7 +43,7 @@ function GameUIWrapper() {
 			shopOpen={shopOpen}
 			onToggleShop={handleToggleShop}
 			onBuyUpgrade={handleBuyUpgrade}
-			onSpawnConveyor={handleSpawnConveyor}
+			onStartPlacement={handleStartPlacement}
 		/>
 	);
 }

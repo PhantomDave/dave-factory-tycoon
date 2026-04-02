@@ -2,6 +2,7 @@ import { Players } from "@rbxts/services";
 import { assignPlot, releasePlot, spawnPlayerAtPlot } from "server/plot";
 import { PlayerService } from "server/services/playerService";
 import { logger } from "server/utils/logger";
+import { clearPlayerGrid, initPlayerGrid } from "./grid";
 
 export const playerService = new PlayerService();
 
@@ -16,6 +17,7 @@ function onPlayerAdded(player: Player) {
 			return;
 		}
 
+		initPlayerGrid(player);
 		player.CharacterAdded.Connect((character) => spawnPlayerAtPlot(player, character));
 
 		// Handle case where the character already exists (e.g. Studio solo mode)
@@ -37,6 +39,7 @@ function onPlayerRemoving(player: Player) {
 			logger.info(`Saving ${player.Name}: ${data.coins} coins`);
 		}
 		playerService.removePlayer(player);
+		clearPlayerGrid(player);
 		releasePlot(player);
 	} catch (err) {
 		logger.error(`Player leaving error for ${player.Name}: ${tostring(err)}`);

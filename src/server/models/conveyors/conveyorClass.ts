@@ -19,16 +19,15 @@ export abstract class ConveyorClass {
 		return this.model.FindFirstChildWhichIsA("BasePart") as BasePart | undefined;
 	}
 
-	spawnModel(position: Vector3 = new Vector3(0, 0, 0)): Model {
-		this.model = spawnTemplateModel(this.templateName, position);
+	spawnModel(cframe: CFrame, parent: Instance): Model {
+		const spawnedModel = spawnTemplateModel(this.templateName, cframe, parent);
+		this.model = spawnedModel;
 		return this.model;
 	}
 
-	spawn(position?: Vector3): Model {
-		const finalPos = position ?? new Vector3(0, 0, 0);
-		const model = this.spawnModel(finalPos);
+	spawn(cframe: CFrame, parent: Instance): void {
+		this.spawnModel(cframe, parent);
 		this.startTransporting();
-		return model;
 	}
 
 	startTransporting(): void {
@@ -52,7 +51,9 @@ export abstract class ConveyorClass {
 			this.transportedItems.set(part, true);
 
 			task.spawn(() => {
-				const humanoidRootPart = (part.Parent as Model)?.FindFirstChild("HumanoidRootPart") as BasePart | undefined;
+				const humanoidRootPart = (part.Parent as Model)?.FindFirstChild("HumanoidRootPart") as
+					| BasePart
+					| undefined;
 				const bodyPart = humanoidRootPart ?? part;
 
 				// Transport the item along the conveyor
