@@ -4,7 +4,7 @@ USER root
 
 # Install utilities and developer shell/tools
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends curl unzip ca-certificates git fish sudo gh openssh-client \
+    && apt-get install -y --no-install-recommends curl unzip ca-certificates git fish sudo gh openssh-client supervisor \
     && usermod --shell /usr/bin/fish bun \
     && usermod -aG sudo bun \
     && echo "bun ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/bun \

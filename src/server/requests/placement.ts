@@ -1,8 +1,7 @@
-import { Workspace } from "@rbxts/services";
 import { getPlayerData } from "server/data";
 import { spawnMachine } from "server/factory";
 import { gridCoordToWorld, occupyCell, validatePlacement } from "server/grid";
-import { getPlayerPlot, getPlotPosition } from "server/plot";
+import { getPlayerPlot, getPlotSurfaceY } from "server/plot";
 import { registerMachine } from "server/services/machineRegistry";
 import { logger } from "server/utils/logger";
 import { MINING_CONFIG } from "shared/constants";
@@ -61,15 +60,7 @@ function authorizePlacement(player: Player, machineType: string, plotFolder: Fol
 }
 
 function getSafeSurfaceY(player: Player, plotFolder: Folder, requestedSurfaceY: number | undefined): number {
-	const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
-	const raycastParams = new RaycastParams();
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
-	raycastParams.FilterDescendantsInstances = [plotFolder];
-
-	const probeOrigin = plotCenter.add(new Vector3(0, 100, 0));
-	const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -250, 0), raycastParams);
-	const baseY = probeResult ? probeResult.Position.Y : plotCenter.Y;
-
+	const baseY = getPlotSurfaceY(player, plotFolder);
 	if (requestedSurfaceY === undefined) {
 		return baseY;
 	}
@@ -110,7 +101,7 @@ export function initPlacementHandler(): void {
 		}
 
 		occupyCell(player, coord, machineType);
-		registerMachine(player, machineType, model);
+		registerMachine(player, machineType, model, rotationQuarterTurns);
 		remotes.PlaceResponse.FireClient(player, { success: true });
 	});
 }

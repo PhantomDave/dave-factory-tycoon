@@ -194,6 +194,22 @@ export function getPlotRotationQuarterTurns(player: Player): number {
 	return normalizeQuarterTurns(getPlotRotationDegrees(player) / 90);
 }
 
+export function getPlotSurfaceY(player: Player, plotFolder?: Folder): number {
+	const entry = playerPlots.get(player);
+	if (!entry) {
+		return 0;
+	}
+
+	const plotCenter = getPlotPosition(player) ?? getPlotInfo(entry.plotIndex).center;
+	const raycastParams = new RaycastParams();
+	raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
+	raycastParams.FilterDescendantsInstances = [plotFolder ?? entry.folder];
+
+	const probeOrigin = plotCenter.add(new Vector3(0, 100, 0));
+	const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -250, 0), raycastParams);
+	return probeResult ? probeResult.Position.Y : plotCenter.Y;
+}
+
 export function getNearestPlotPosition(worldPosition: Vector3): Vector3 {
 	let nearestCenter = getPlotInfo(0).center;
 	let bestDistance = math.huge;

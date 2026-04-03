@@ -1,5 +1,5 @@
 import { UPGRADES } from "shared/types";
-import { getPlayerData } from "server/data";
+import { addCoins, getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
 import { BaseMiner } from "server/models/miners/baseMiner";
 import { getPlayerSpawnPosition, spawnTemplateModel } from "server/models/spawnUtils";
@@ -51,9 +51,7 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 	}
 
 	// Deduct coins (after all validation)
-	data.coins -= upgrade.cost;
-	// Notify client of balance change
-	remotes.UpdateBalance.FireClient(player, data.coins);
+	addCoins(player, -upgrade.cost);
 
 	return true;
 }

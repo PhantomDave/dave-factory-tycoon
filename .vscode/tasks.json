@@ -4,11 +4,8 @@
 		{
 			"label": "rojo: serve",
 			"type": "shell",
-			"command": "rojo serve ",
+			"command": "rojo serve",
 			"problemMatcher": [],
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -20,9 +17,6 @@
 			"type": "shell",
 			"command": "bun run watch",
 			"problemMatcher": [],
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
