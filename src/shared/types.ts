@@ -2,8 +2,11 @@ import { UPGRADE_CONFIG } from "shared/constants";
 
 export interface MachineData {
 	id: string;
-	position: { X: number; Y: number; Z: number };
-	rotation: { RX: number; RY: number; RZ: number };
+	coord?: GridCoord;
+	surfaceY?: number;
+	rotationQuarterTurns?: number;
+	position?: { X: number; Y: number; Z: number };
+	rotation?: { RX: number; RY: number; RZ: number };
 	state: string;
 }
 

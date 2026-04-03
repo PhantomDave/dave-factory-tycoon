@@ -1,3 +1,5 @@
+import { getPlotPosition, getPlotRotationDegrees } from "server/plot";
+import { worldToGridCoord } from "shared/gridMath";
 import type { MachineData } from "shared/types";
 
 interface MachineEntry {
@@ -6,6 +8,14 @@ interface MachineEntry {
 }
 
 const registry = new Map<Player, MachineEntry[]>();
+
+function normalizeDegrees(value: number): number {
+	return ((value % 360) + 360) % 360;
+}
+
+function normalizeQuarterTurns(value: number): number {
+	return ((math.round(value) % 4) + 4) % 4;
+}
 
 export function registerMachine(player: Player, machineType: string, model: Model): void {
 	let entries = registry.get(player);
@@ -19,18 +29,28 @@ export function registerMachine(player: Player, machineType: string, model: Mode
 export function serializeMachines(player: Player): MachineData[] {
 	const entries = registry.get(player);
 	if (!entries) return [];
+
+	const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
+	const plotRotationDegrees = getPlotRotationDegrees(player);
+
 	return entries
 		.filter((e) => e.model.Parent !== undefined)
 		.map((e) => {
 			const cf = e.model.GetPivot();
 			const pos = cf.Position;
-			const [rx, ry, rz] = cf.ToEulerAnglesXYZ();
+			const [_rx, ry] = cf.ToEulerAnglesXYZ();
+			const coord = worldToGridCoord(pos, plotCenter, e.machineType, plotRotationDegrees);
+			const worldRotationDegrees = normalizeDegrees(math.deg(ry));
+			const relativeRotationDegrees = normalizeDegrees(worldRotationDegrees - plotRotationDegrees);
+			const rotationQuarterTurns = normalizeQuarterTurns(relativeRotationDegrees / 90);
+
 			return {
 				id: e.machineType,
-				position: { X: pos.X, Y: pos.Y, Z: pos.Z },
-				rotation: { RX: rx, RY: ry, RZ: rz },
+				coord,
+				surfaceY: pos.Y,
+				rotationQuarterTurns,
 				state: "active",
-			} as MachineData;
+			};
 		});
 }
 

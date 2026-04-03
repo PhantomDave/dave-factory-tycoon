@@ -39,3 +39,13 @@ export function saveData(
 		logger.warn(`DataStore save failed for ${userId}: ${tostring(e)}`);
 	}
 }
+
+export function deleteData(userId: number): boolean {
+	try {
+		store.RemoveAsync(playerKey(userId));
+		return true;
+	} catch (e) {
+		logger.warn(`DataStore delete failed for ${userId}: ${tostring(e)}`);
+		return false;
+	}
+}

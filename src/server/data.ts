@@ -1,15 +1,67 @@
 import { Players } from "@rbxts/services";
-import { assignPlot, releasePlot, spawnPlayerAtPlot, getPlayerPlot, getPlotPosition } from "server/plot";
+import {
+	assignPlot,
+	getNearestPlotPosition,
+	getNearestPlotRotationDegrees,
+	getPlayerPlot,
+	getPlotPosition,
+	releasePlot,
+	spawnPlayerAtPlot,
+} from "server/plot";
 import { PlayerService } from "server/services/playerService";
 import { logger } from "server/utils/logger";
-import { clearPlayerGrid, initPlayerGrid, occupyCell } from "./grid";
-import { loadData, saveData } from "server/services/dataService";
+import { clearPlayerGrid, gridCoordToWorld, initPlayerGrid, occupyCell } from "./grid";
+import { deleteData, loadData, saveData } from "server/services/dataService";
 import { registerMachine, serializeMachines, clearMachines } from "server/services/machineRegistry";
 import { spawnMachine } from "server/factory";
+import { getRemotes } from "shared/remotes";
 import { worldToGridCoord } from "shared/gridMath";
-import type { MachineData } from "shared/types";
+import type { GridCoord, MachineData } from "shared/types";
 
 export const playerService = new PlayerService();
+
+function normalizeQuarterTurns(value: number): number {
+	return ((math.round(value) % 4) + 4) % 4;
+}
+
+function getSavedRotationQuarterTurns(machine: MachineData, legacyPlotRotationDegrees = 0): number {
+	if (machine.rotationQuarterTurns !== undefined) {
+		return normalizeQuarterTurns(machine.rotationQuarterTurns);
+	}
+
+	if (machine.rotation !== undefined) {
+		const worldRotationQuarterTurns = (math.deg(machine.rotation.RY) - legacyPlotRotationDegrees) / 90;
+		return normalizeQuarterTurns(worldRotationQuarterTurns);
+	}
+
+	return 0;
+}
+
+function getSavedMachinePlacement(
+	machine: MachineData,
+	currentPlotCenter: Vector3,
+): { coord: GridCoord; surfaceY: number; legacyPlotRotationDegrees: number } | undefined {
+	if (machine.coord !== undefined) {
+		return {
+			coord: machine.coord,
+			surfaceY: machine.surfaceY ?? currentPlotCenter.Y,
+			legacyPlotRotationDegrees: 0,
+		};
+	}
+
+	if (machine.position !== undefined) {
+		const legacyPos = new Vector3(machine.position.X, machine.position.Y, machine.position.Z);
+		const legacyPlotCenter = getNearestPlotPosition(legacyPos);
+		const legacyPlotRotationDegrees = getNearestPlotRotationDegrees(legacyPos);
+		return {
+			coord: worldToGridCoord(legacyPos, legacyPlotCenter, machine.id, legacyPlotRotationDegrees),
+			surfaceY: legacyPos.Y,
+			legacyPlotRotationDegrees,
+		};
+	}
+
+	return undefined;
+}
 
 function reconstructMachines(player: Player, machines: MachineData[]): void {
 	if (machines.size() === 0) return;
@@ -22,18 +74,28 @@ function reconstructMachines(player: Player, machines: MachineData[]): void {
 
 	const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
 
-	for (const m of machines) {
-		const pos = new Vector3(m.position.X, m.position.Y, m.position.Z);
-		const rotCF = CFrame.fromEulerAnglesXYZ(m.rotation.RX, m.rotation.RY, m.rotation.RZ);
-		const cf = new CFrame(pos).mul(rotCF);
+	for (const machine of machines) {
+		const savedPlacement = getSavedMachinePlacement(machine, plotCenter);
+		if (!savedPlacement) {
+			logger.warn(`Machine save for '${machine.id}' is missing placement data for ${player.Name}; skipping`);
+			continue;
+		}
 
-		const model = spawnMachine(m.id, player, cf, plotFolder);
+		const rotationQuarterTurns = getSavedRotationQuarterTurns(machine, savedPlacement.legacyPlotRotationDegrees);
+		const cf = gridCoordToWorld(
+			player,
+			savedPlacement.coord,
+			machine.id,
+			savedPlacement.surfaceY,
+			rotationQuarterTurns,
+		);
+
+		const model = spawnMachine(machine.id, player, cf, plotFolder);
 		if (model) {
-			registerMachine(player, m.id, model);
-			const coord = worldToGridCoord(pos, plotCenter, m.id);
-			occupyCell(player, coord, m.id);
+			registerMachine(player, machine.id, model);
+			occupyCell(player, savedPlacement.coord, machine.id);
 		} else {
-			logger.warn(`Unknown machine type '${m.id}' for ${player.Name}; skipping`);
+			logger.warn(`Unknown machine type '${machine.id}' for ${player.Name}; skipping`);
 		}
 	}
 
@@ -120,4 +182,36 @@ export function addCoins(player: Player, amount: number): void {
 
 export function getBalance(player: Player): number {
 	return playerService.getBalance(player);
+}
+
+export function wipePlayerData(player: Player): boolean {
+	const data = playerService.getPlayer(player);
+	if (!data) {
+		return false;
+	}
+
+	const plotFolder = getPlayerPlot(player);
+	if (plotFolder) {
+		for (const child of plotFolder.GetChildren()) {
+			child.Destroy();
+		}
+	}
+
+	clearMachines(player);
+	clearPlayerGrid(player);
+	initPlayerGrid(player);
+
+	data.coins = 0;
+	data.multiplier = 1;
+	data.unlockedUpgrades = [];
+	data.machines = [];
+	data.lastChecked = os.time();
+
+	const wasDeleted = deleteData(player.UserId);
+	const remotes = getRemotes();
+	remotes.UpdateBalance.FireClient(player, data.coins);
+	remotes.UpdateMultiplier.FireClient(player, data.multiplier);
+
+	logger.warn(`${player.Name} wiped their saved data`);
+	return wasDeleted;
 }

@@ -1,3 +1,5 @@
+import { Players } from "@rbxts/services";
+import { wipePlayerData } from "server/data";
 import { initializeSellZones } from "server/models/sellZone";
 import { onBuyUpgrade } from "server/upgrade";
 import { logger } from "server/utils/logger";
@@ -10,7 +12,30 @@ import "server/models/miners/baseMiner";
 import "server/models/conveyors/baseConveyor";
 // server/models/sellZone is already imported above via initializeSellZones
 
+const WIPE_DATA_COMMANDS = new Set(["/wipe", "!wipe", "/resetdata", "!resetdata"]);
+
 logger.info("Server starting...");
+
+Players.PlayerAdded.Connect((player) => {
+	player.Chatted.Connect((message) => {
+		const command = message.lower().split(" ")[0];
+		if (!WIPE_DATA_COMMANDS.has(command)) {
+			return;
+		}
+
+		try {
+			const didDelete = wipePlayerData(player);
+			if (!didDelete) {
+				logger.warn(`Wipe data command failed for ${player.Name}`);
+				return;
+			}
+
+			player.Kick("Your saved data was wiped. Rejoin for a fresh start.");
+		} catch (err) {
+			logger.error(`Wipe data command failed for ${player.Name}: ${tostring(err)}`);
+		}
+	});
+});
 
 task.spawn(() => {
 	const remotes = getRemotes();
