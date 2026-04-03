@@ -8,9 +8,9 @@ const BUILD_PLATE_SIZE_TOLERANCE = 6;
 // One entry per available plot slot. Space plots far enough apart so
 // machines spawned inside them never overlap (100 studs per slot).
 const PLOT_POSITIONS: Vector3[] = [
-	new Vector3(-407.998, 269.891, -582.325),
 	new Vector3(-214.742, 269.891, -539.329),
 	new Vector3(-197.848, 269.891, -396.275),
+	new Vector3(-407.998, 269.891, -582.325),
 	new Vector3(-617.848, 269.891, -396.675),
 	new Vector3(-569.623, 269.891, -564.643),
 ];
