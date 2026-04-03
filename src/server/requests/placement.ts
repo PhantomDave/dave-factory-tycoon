@@ -102,11 +102,33 @@ export function performPlacement(
 	return undefined;
 }
 
+function isValidPlaceRequest(request: unknown): request is PlaceRequest {
+	if (typeIs(request, "table")) {
+		const r = request as Record<string, unknown>;
+		return (
+			typeIs(r.machineType, "string") &&
+			r.machineType.size() > 0 &&
+			typeIs(r.coord, "table") &&
+			typeIs((r.coord as Record<string, unknown>).x, "number") &&
+			typeIs((r.coord as Record<string, unknown>).z, "number") &&
+			(r.surfaceY === undefined || typeIs(r.surfaceY, "number")) &&
+			(r.rotationQuarterTurns === undefined || typeIs(r.rotationQuarterTurns, "number"))
+		);
+	}
+	return false;
+}
+
 export function initPlacementHandler(): void {
 	const remotes = getRemotes();
 
 	remotes.PlaceRequest.OnServerEvent.Connect((player, request) => {
-		const { machineType, coord, surfaceY, rotationQuarterTurns } = request as PlaceRequest;
+		if (!isValidPlaceRequest(request)) {
+			logger.warn(`${player.Name} sent malformed PlaceRequest`);
+			remotes.PlaceResponse.FireClient(player, { success: false, reason: "Invalid request" });
+			return;
+		}
+
+		const { machineType, coord, surfaceY, rotationQuarterTurns } = request;
 
 		const placementError = performPlacement(player, machineType, coord, surfaceY, rotationQuarterTurns);
 		if (placementError !== undefined) {

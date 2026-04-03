@@ -1,4 +1,4 @@
-import { UPGRADES } from "shared/types";
+import { UPGRADES, MACHINE_SIZES } from "shared/types";
 import { addCoins, getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
 import { findFreeGridCoord } from "server/grid";
@@ -34,6 +34,11 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		logger.info(`${player.Name} bought ${upgrade.displayName}`);
 		remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 	} else if (upgrade.type === "spawner") {
+		if (!MACHINE_SIZES[upgrade.spawnerTemplate]) {
+			logger.warn(`${player.Name} spawner upgrade references unknown machine type: ${upgrade.spawnerTemplate}`);
+			return false;
+		}
+
 		const freeCoord = findFreeGridCoord(player, upgrade.spawnerTemplate);
 		if (freeCoord === undefined) {
 			logger.warn(`${player.Name} has no free grid space for ${upgrade.displayName}`);
