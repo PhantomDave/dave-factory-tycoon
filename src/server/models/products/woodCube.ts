@@ -1,5 +1,6 @@
 import { Workspace } from "@rbxts/services";
 import type { Product } from "server/models/products/Products";
+import { registerTrackedItem } from "server/services/itemMovementService";
 import { PRODUCT_CONFIG } from "shared/constants";
 
 export class WoodCube implements Product {
@@ -24,6 +25,8 @@ export class WoodCube implements Product {
 		woodModel.PrimaryPart = part;
 		woodModel.PivotTo(new CFrame(position));
 		woodModel.Parent = Workspace;
+		part.SetNetworkOwner(undefined);
+		registerTrackedItem(woodModel);
 
 		task.delay(PRODUCT_CONFIG.woodCube.lifetime, () => {
 			woodModel.Destroy();

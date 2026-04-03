@@ -2,12 +2,15 @@ import { Players } from "@rbxts/services";
 import { getRemotes } from "shared/remotes";
 import React, { StrictMode, useEffect, useState } from "@rbxts/react";
 import { createPortal, createRoot } from "@rbxts/react-roblox";
+import { initializeItemMovementController } from "./itemMovementController";
 import { GameUI } from "./ui/components/GameUI";
 import { placementController } from "./placementController";
 
 const player = Players.LocalPlayer;
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui;
 const remotes = getRemotes();
+
+initializeItemMovementController();
 
 function getInitialBalance(): number {
 	const leaderstats = player.FindFirstChild("leaderstats");

@@ -69,6 +69,13 @@ export interface PlaceResponse {
 	reason?: string;
 }
 
+export interface ItemMovementSnapshot {
+	itemId: string;
+	startPosition: Vector3;
+	velocity: Vector3;
+	timestamp: number;
+}
+
 export const PLOT_SIZE = 50; // 50x50 cells per plot
 export const PLOT_SIZE_STUDS = 50; // actual plot size in studs (50x1x50)
 export const GRID_CELL_SIZE = PLOT_SIZE_STUDS / PLOT_SIZE; // 1 stud per cell

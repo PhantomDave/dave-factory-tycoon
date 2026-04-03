@@ -1,4 +1,5 @@
 import { spawnTemplateModel } from "server/models/spawnUtils";
+import { setTrackedItemVelocity } from "server/services/itemMovementService";
 import { logger } from "server/utils/logger";
 import { CONVEYOR_CONFIG } from "shared/constants";
 
@@ -59,7 +60,26 @@ export abstract class ConveyorClass {
 				// Transport the item along the conveyor
 				while (this.model.Parent && bodyPart.Parent && this.transportedItems.has(part)) {
 					const moveDirection = conveyorSurface.CFrame.LookVector;
-					bodyPart.AssemblyLinearVelocity = moveDirection.mul(this.getSpeed());
+					const conveyorVelocity = moveDirection.mul(this.getSpeed());
+					const itemModel = bodyPart.FindFirstAncestorOfClass("Model");
+
+					if (itemModel) {
+						// Only track product models. Skip humanoids/character models and anything
+						// without a ProductValue attribute so we don't accidentally track players.
+						const hasHumanoid =
+							itemModel.FindFirstChildWhichIsA("Humanoid") !== undefined ||
+							itemModel.FindFirstChild("HumanoidRootPart") !== undefined;
+						const productValue = itemModel.GetAttribute("ProductValue");
+
+						if (!hasHumanoid && typeIs(productValue, "number")) {
+							setTrackedItemVelocity(itemModel, conveyorVelocity);
+						} else {
+							// Fallback: apply velocity to the touching part only
+							bodyPart.AssemblyLinearVelocity = conveyorVelocity;
+						}
+					} else {
+						bodyPart.AssemblyLinearVelocity = conveyorVelocity;
+					}
 
 					task.wait(CONVEYOR_CONFIG.updateInterval); // ~60 FPS
 				}
