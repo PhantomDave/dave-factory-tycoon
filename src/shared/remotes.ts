@@ -1,5 +1,5 @@
 import { ReplicatedStorage } from "@rbxts/services";
-import { PlaceRequest, PlaceResponse } from "./types";
+import { ItemMovementSnapshot, PlaceRequest, PlaceResponse } from "./types";
 
 type TypedRemoteEvent<TArgs extends defined[] = []> = RemoteEvent & {
 	FireServer: (...args: TArgs) => void;
@@ -16,6 +16,7 @@ export interface Remotes {
 	UpdateMultiplier: TypedRemoteEvent<[newMultiplier: number]>;
 	PlaceRequest: TypedRemoteEvent<[request: PlaceRequest]>;
 	PlaceResponse: TypedRemoteEvent<[response: PlaceResponse]>;
+	ItemMovement: TypedRemoteEvent<[updates: ItemMovementSnapshot[]]>;
 }
 
 export function getRemotes(): Remotes {
@@ -45,5 +46,6 @@ export function getRemotes(): Remotes {
 		UpdateMultiplier: ensureRemote("UpdateMultiplier"),
 		PlaceRequest: ensureRemote("PlaceRequest"),
 		PlaceResponse: ensureRemote("PlaceResponse"),
+		ItemMovement: ensureRemote("ItemMovement"),
 	};
 }

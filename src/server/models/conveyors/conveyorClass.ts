@@ -1,4 +1,5 @@
 import { spawnTemplateModel } from "server/models/spawnUtils";
+import { setTrackedItemVelocity } from "server/services/itemMovementService";
 import { logger } from "server/utils/logger";
 import { CONVEYOR_CONFIG } from "shared/constants";
 
@@ -59,7 +60,14 @@ export abstract class ConveyorClass {
 				// Transport the item along the conveyor
 				while (this.model.Parent && bodyPart.Parent && this.transportedItems.has(part)) {
 					const moveDirection = conveyorSurface.CFrame.LookVector;
-					bodyPart.AssemblyLinearVelocity = moveDirection.mul(this.getSpeed());
+					const conveyorVelocity = moveDirection.mul(this.getSpeed());
+					const itemModel = bodyPart.FindFirstAncestorOfClass("Model");
+
+					if (itemModel) {
+						setTrackedItemVelocity(itemModel, conveyorVelocity);
+					} else {
+						bodyPart.AssemblyLinearVelocity = conveyorVelocity;
+					}
 
 					task.wait(CONVEYOR_CONFIG.updateInterval); // ~60 FPS
 				}

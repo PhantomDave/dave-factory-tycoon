@@ -30,6 +30,12 @@ export const PRODUCT_CONFIG = {
 	},
 } as const;
 
+export const ITEM_MOVEMENT_ID_ATTRIBUTE = "ItemMovementId";
+
+export const ITEM_MOVEMENT_CONFIG = {
+	syncInterval: 0.1,
+} as const;
+
 // Conveyor configuration
 export const CONVEYOR_CONFIG = {
 	baseSpeed: 1,
