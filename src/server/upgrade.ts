@@ -1,8 +1,8 @@
-import { UPGRADES } from "shared/types";
+import { UPGRADES, MACHINE_SIZES } from "shared/types";
 import { addCoins, getPlayerData } from "server/data";
 import { getRemotes } from "shared/remotes";
-import { BaseMiner } from "server/models/miners/baseMiner";
-import { getPlayerSpawnPosition, spawnTemplateModel } from "server/models/spawnUtils";
+import { findFreeGridCoord } from "server/grid";
+import { performPlacement } from "server/requests/placement";
 import { logger } from "server/utils/logger";
 
 export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
@@ -34,16 +34,21 @@ export function onBuyUpgrade(player: Player, upgradeId: string): boolean {
 		logger.info(`${player.Name} bought ${upgrade.displayName}`);
 		remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 	} else if (upgrade.type === "spawner") {
-		// Note: Spawner upgrades should use the placement system instead
-		// This is a temporary fix for backwards compatibility
-		const spawnPos = getPlayerSpawnPosition(player);
-		const spawnCFrame = new CFrame(spawnPos);
+		if (!MACHINE_SIZES[upgrade.spawnerTemplate]) {
+			logger.warn(`${player.Name} spawner upgrade references unknown machine type: ${upgrade.spawnerTemplate}`);
+			return false;
+		}
 
-		if (upgrade.spawnerTemplate === "BaseMiner") {
-			const miner = new BaseMiner(upgrade.spawnerTemplate, player.UserId);
-			miner.spawn(spawnCFrame, game.Workspace);
-		} else {
-			spawnTemplateModel(upgrade.spawnerTemplate, spawnCFrame);
+		const freeCoord = findFreeGridCoord(player, upgrade.spawnerTemplate);
+		if (freeCoord === undefined) {
+			logger.warn(`${player.Name} has no free grid space for ${upgrade.displayName}`);
+			return false;
+		}
+
+		const placementError = performPlacement(player, upgrade.spawnerTemplate, freeCoord);
+		if (placementError !== undefined) {
+			logger.warn(`${player.Name} placement via upgrade failed for ${upgrade.displayName}: ${placementError}`);
+			return false;
 		}
 
 		data.unlockedUpgrades.push(upgradeId);

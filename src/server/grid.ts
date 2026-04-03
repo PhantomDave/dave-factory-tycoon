@@ -108,6 +108,33 @@ export function occupyCell(player: Player, coord: GridCoord, machineType: string
 	}
 }
 
+export function findFreeGridCoord(player: Player, machineType: string): GridCoord | undefined {
+	const size = MACHINE_SIZES[machineType];
+	if (!size) return undefined;
+
+	const { occupied } = ensurePlayerGrid(player);
+
+	for (let z = 0; z + size.height <= PLOT_SIZE; z++) {
+		for (let x = 0; x + size.width <= PLOT_SIZE; x++) {
+			let fits = true;
+
+			for (let dx = 0; dx < size.width && fits; dx++) {
+				for (let dz = 0; dz < size.height && fits; dz++) {
+					if (occupied.has(`${x + dx},${z + dz}`)) {
+						fits = false;
+					}
+				}
+			}
+
+			if (fits) {
+				return { x, z };
+			}
+		}
+	}
+
+	return undefined;
+}
+
 /**
  * Scans the four faces of the machine footprint for an adjacent conveyor and returns
  * the corresponding DropSide. Falls back to "top" if none is found.

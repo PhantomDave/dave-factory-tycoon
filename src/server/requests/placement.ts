@@ -6,7 +6,7 @@ import { registerMachine } from "server/services/machineRegistry";
 import { logger } from "server/utils/logger";
 import { MINING_CONFIG } from "shared/constants";
 import { getRemotes } from "shared/remotes";
-import { PlaceRequest, UPGRADES } from "shared/types";
+import { PlaceRequest, UPGRADES, GridCoord } from "shared/types";
 
 const MAX_MACHINES_PER_PLOT = 100;
 const MAX_SURFACE_OFFSET = 6;
@@ -68,40 +68,75 @@ function getSafeSurfaceY(player: Player, plotFolder: Folder, requestedSurfaceY: 
 	return math.clamp(requestedSurfaceY, baseY - MAX_SURFACE_OFFSET, baseY + MAX_SURFACE_OFFSET);
 }
 
+export function performPlacement(
+	player: Player,
+	machineType: string,
+	coord: GridCoord,
+	surfaceY?: number,
+	rotationQuarterTurns = 0,
+): string | undefined {
+	const plotFolder = getPlayerPlot(player);
+	if (!plotFolder) {
+		return "No plot assigned";
+	}
+
+	const authError = authorizePlacement(player, machineType, plotFolder);
+	if (authError !== undefined) {
+		return authError;
+	}
+
+	const validationError = validatePlacement(player, coord, machineType);
+	if (validationError !== undefined) {
+		return validationError;
+	}
+
+	const safeSurfaceY = getSafeSurfaceY(player, plotFolder, surfaceY);
+	const worldCFrame = gridCoordToWorld(player, coord, machineType, safeSurfaceY, rotationQuarterTurns);
+	const model = spawnMachine(machineType, player, worldCFrame, plotFolder);
+	if (!model) {
+		return "Unknown machine type";
+	}
+
+	occupyCell(player, coord, machineType);
+	registerMachine(player, machineType, model, rotationQuarterTurns);
+	return undefined;
+}
+
+function isValidPlaceRequest(request: unknown): request is PlaceRequest {
+	if (typeIs(request, "table")) {
+		const r = request as Record<string, unknown>;
+		return (
+			typeIs(r.machineType, "string") &&
+			r.machineType.size() > 0 &&
+			typeIs(r.coord, "table") &&
+			typeIs((r.coord as Record<string, unknown>).x, "number") &&
+			typeIs((r.coord as Record<string, unknown>).z, "number") &&
+			(r.surfaceY === undefined || typeIs(r.surfaceY, "number")) &&
+			(r.rotationQuarterTurns === undefined || typeIs(r.rotationQuarterTurns, "number"))
+		);
+	}
+	return false;
+}
+
 export function initPlacementHandler(): void {
 	const remotes = getRemotes();
 
 	remotes.PlaceRequest.OnServerEvent.Connect((player, request) => {
-		const { machineType, coord, surfaceY, rotationQuarterTurns } = request as PlaceRequest;
-		const plotFolder = getPlayerPlot(player);
-		if (!plotFolder) {
-			remotes.PlaceResponse.FireClient(player, { success: false, reason: "No plot assigned" });
+		if (!isValidPlaceRequest(request)) {
+			logger.warn(`${player.Name} sent malformed PlaceRequest`);
+			remotes.PlaceResponse.FireClient(player, { success: false, reason: "Invalid request" });
 			return;
 		}
 
-		const authError = authorizePlacement(player, machineType, plotFolder);
-		if (authError !== undefined) {
-			logger.warn(`${player.Name} placement rejected: ${authError}`);
-			remotes.PlaceResponse.FireClient(player, { success: false, reason: authError });
+		const { machineType, coord, surfaceY, rotationQuarterTurns } = request;
+
+		const placementError = performPlacement(player, machineType, coord, surfaceY, rotationQuarterTurns);
+		if (placementError !== undefined) {
+			logger.warn(`${player.Name} placement rejected: ${placementError}`);
+			remotes.PlaceResponse.FireClient(player, { success: false, reason: placementError });
 			return;
 		}
 
-		const isError = validatePlacement(player, coord, machineType);
-		if (isError !== undefined) {
-			remotes.PlaceResponse.FireClient(player, { success: false, reason: isError });
-			return;
-		}
-
-		const safeSurfaceY = getSafeSurfaceY(player, plotFolder, surfaceY);
-		const worldCFrame = gridCoordToWorld(player, coord, machineType, safeSurfaceY, rotationQuarterTurns);
-		const model = spawnMachine(machineType, player, worldCFrame, plotFolder);
-		if (!model) {
-			remotes.PlaceResponse.FireClient(player, { success: false, reason: "Unknown machine type" });
-			return;
-		}
-
-		occupyCell(player, coord, machineType);
-		registerMachine(player, machineType, model, rotationQuarterTurns);
 		remotes.PlaceResponse.FireClient(player, { success: true });
 	});
 }
