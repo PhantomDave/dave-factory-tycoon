@@ -3,6 +3,9 @@ import { ITEM_MOVEMENT_CONFIG, ITEM_MOVEMENT_ID_ATTRIBUTE } from "shared/constan
 import { getRemotes } from "shared/remotes";
 import type { ItemMovementSnapshot } from "shared/types";
 
+// Cache remotes once to avoid repeated lookups in the sync loop
+const remotes = getRemotes();
+
 interface TrackedItemRecord {
 	model: Model;
 	lastVelocity: Vector3;
@@ -13,9 +16,16 @@ let nextItemId = 0;
 let syncLoopStarted = false;
 
 function getPrimaryPart(itemModel: Model): BasePart | undefined {
-	const primaryPart = itemModel.PrimaryPart ?? (itemModel.FindFirstChildWhichIsA("BasePart") as BasePart | undefined);
-	if (primaryPart && itemModel.PrimaryPart !== primaryPart) {
-		itemModel.PrimaryPart = primaryPart;
+	// Require an explicit PrimaryPart. Avoid mutating models or picking arbitrary parts
+	// via FindFirstChildWhichIsA — product models should set PrimaryPart at creation.
+	const primaryPart = itemModel.PrimaryPart as BasePart | undefined;
+	if (!primaryPart) {
+		return undefined;
+	}
+
+	// Guard against mis-parenting
+	if (!primaryPart.IsDescendantOf(itemModel)) {
+		return undefined;
 	}
 
 	return primaryPart;
@@ -89,7 +99,7 @@ function broadcastSnapshots(snapshots: ItemMovementSnapshot[]): void {
 		return;
 	}
 
-	getRemotes().ItemMovement.FireAllClients(snapshots);
+	remotes.ItemMovement.FireAllClients(snapshots);
 }
 
 function startItemMovementSyncLoop(): void {

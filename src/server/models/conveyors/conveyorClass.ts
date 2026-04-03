@@ -64,7 +64,19 @@ export abstract class ConveyorClass {
 					const itemModel = bodyPart.FindFirstAncestorOfClass("Model");
 
 					if (itemModel) {
-						setTrackedItemVelocity(itemModel, conveyorVelocity);
+						// Only track product models. Skip humanoids/character models and anything
+						// without a ProductValue attribute so we don't accidentally track players.
+						const hasHumanoid =
+							itemModel.FindFirstChildWhichIsA("Humanoid") !== undefined ||
+							itemModel.FindFirstChild("HumanoidRootPart") !== undefined;
+						const productValue = itemModel.GetAttribute("ProductValue");
+
+						if (!hasHumanoid && typeIs(productValue, "number")) {
+							setTrackedItemVelocity(itemModel, conveyorVelocity);
+						} else {
+							// Fallback: apply velocity to the touching part only
+							bodyPart.AssemblyLinearVelocity = conveyorVelocity;
+						}
 					} else {
 						bodyPart.AssemblyLinearVelocity = conveyorVelocity;
 					}
