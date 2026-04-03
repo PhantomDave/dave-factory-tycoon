@@ -2,3 +2,5 @@
 /out
 /include
 *.tsbuildinfo
+/coverage
+package-lock.json
