@@ -1,15 +1,23 @@
-import { PlayerData } from "shared/types";
+import { MachineData, PlayerData } from "shared/types";
+
+interface SavedPlayerData {
+	coins: number;
+	multiplier: number;
+	unlockedUpgrades: string[];
+	machines: MachineData[];
+}
 
 export class PlayerService {
 	private playerData = new Map<Player, PlayerData>();
 
-	addPlayer(player: Player): void {
+	addPlayer(player: Player, saved?: Partial<SavedPlayerData>): void {
 		this.playerData.set(player, {
 			playerId: player.UserId,
-			coins: 0,
-			multiplier: 1,
-			unlockedUpgrades: [],
+			coins: saved?.coins ?? 0,
+			multiplier: saved?.multiplier ?? 1,
+			unlockedUpgrades: saved?.unlockedUpgrades ?? [],
 			lastChecked: os.time(),
+			machines: saved?.machines ?? [],
 		});
 	}
 

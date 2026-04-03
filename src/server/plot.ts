@@ -4,18 +4,35 @@ import { PLOT_SIZE_STUDS } from "shared/types";
 
 const BUILD_PLATE_SEARCH_RADIUS = 80;
 const BUILD_PLATE_SIZE_TOLERANCE = 6;
+const plotRandom = new Random();
 
 // One entry per available plot slot. Space plots far enough apart so
 // machines spawned inside them never overlap (100 studs per slot).
 const PLOT_POSITIONS: Vector3[] = [
-	new Vector3(-407.998, 269.891, -582.325),
 	new Vector3(-214.742, 269.891, -539.329),
 	new Vector3(-197.848, 269.891, -396.275),
+	new Vector3(-407.998, 269.891, -582.325),
 	new Vector3(-617.848, 269.891, -396.675),
 	new Vector3(-569.623, 269.891, -564.643),
 ];
 
-function resolveBuildPlotCenter(anchor: Vector3): Vector3 {
+interface ResolvedPlotInfo {
+	center: Vector3;
+	rotationDegrees: number;
+	rotationQuarterTurns: number;
+}
+
+const plotInfoCache = new Map<number, ResolvedPlotInfo>();
+
+function normalizeDegrees(value: number): number {
+	return ((value % 360) + 360) % 360;
+}
+
+function normalizeQuarterTurns(value: number): number {
+	return ((math.round(value) % 4) + 4) % 4;
+}
+
+function resolveBuildPlotInfo(anchor: Vector3): ResolvedPlotInfo {
 	let bestPart: BasePart | undefined;
 	let bestDistance = math.huge;
 
@@ -41,7 +58,28 @@ function resolveBuildPlotCenter(anchor: Vector3): Vector3 {
 		bestDistance = horizontalDistance;
 	}
 
-	return bestPart?.Position ?? anchor;
+	let rotationDegrees = 0;
+	if (bestPart) {
+		const [, yawRadians] = bestPart.CFrame.ToOrientation();
+		rotationDegrees = normalizeDegrees(math.deg(yawRadians));
+	}
+
+	return {
+		center: bestPart?.Position ?? anchor,
+		rotationDegrees,
+		rotationQuarterTurns: normalizeQuarterTurns(rotationDegrees / 90),
+	};
+}
+
+function getPlotInfo(plotIndex: number): ResolvedPlotInfo {
+	const cached = plotInfoCache.get(plotIndex);
+	if (cached) {
+		return cached;
+	}
+
+	const resolved = resolveBuildPlotInfo(PLOT_POSITIONS[plotIndex]);
+	plotInfoCache.set(plotIndex, resolved);
+	return resolved;
 }
 
 interface PlotEntry {
@@ -55,18 +93,28 @@ const plotOwners = new Map<number, Player>();
 // Player -> their folder + slot index
 const playerPlots = new Map<Player, PlotEntry>();
 
-// Finds the first free slot, creates a Folder at that position,
-// and records ownership in both maps. Returns undefined if no slots are free.
-export function assignPlot(player: Player): Folder | undefined {
-	let plotIndex = -1;
+function getRandomAvailablePlotIndex(): number | undefined {
+	const freePlotIndices: number[] = [];
+
 	for (let i = 0; i < PLOT_POSITIONS.size(); i++) {
 		if (!plotOwners.has(i)) {
-			plotIndex = i;
-			break;
+			freePlotIndices.push(i);
 		}
 	}
 
-	if (plotIndex === -1) {
+	if (freePlotIndices.size() === 0) {
+		return undefined;
+	}
+
+	return freePlotIndices[plotRandom.NextInteger(0, freePlotIndices.size() - 1)];
+}
+
+// Finds a random free slot, creates a Folder at that position,
+// and records ownership in both maps. Returns undefined if no slots are free.
+export function assignPlot(player: Player): Folder | undefined {
+	const plotIndex = getRandomAvailablePlotIndex();
+
+	if (plotIndex === undefined) {
 		logger.warn(`No free plots available for ${player.Name}`);
 		return undefined;
 	}
@@ -77,11 +125,14 @@ export function assignPlot(player: Player): Folder | undefined {
 	// Name plots by slot index rather than by owner to avoid leaking ownership.
 	folder.Name = `Plot_${plotIndex}`;
 
-	// Store both the spawn anchor and the actual build-plate center.
+	// Store both the spawn anchor and the actual build-plate transform.
 	const spawnAnchor = PLOT_POSITIONS[plotIndex];
-	const buildPlotCenter = resolveBuildPlotCenter(spawnAnchor);
+	const buildPlot = resolveBuildPlotInfo(spawnAnchor);
+	plotInfoCache.set(plotIndex, buildPlot);
 	folder.SetAttribute("PlotSpawnPosition", spawnAnchor);
-	folder.SetAttribute("PlotPosition", buildPlotCenter);
+	folder.SetAttribute("PlotPosition", buildPlot.center);
+	folder.SetAttribute("PlotRotationDegrees", buildPlot.rotationDegrees);
+	folder.SetAttribute("PlotRotationQuarterTurns", buildPlot.rotationQuarterTurns);
 	player.SetAttribute("PlotNumber", plotIndex);
 
 	// Parent last — triggers replication.
@@ -119,7 +170,70 @@ export function getPlotPosition(player: Player): Vector3 | undefined {
 	if (!entry) return undefined;
 
 	const storedCenter = entry.folder.GetAttribute("PlotPosition") as Vector3 | undefined;
-	return storedCenter ?? resolveBuildPlotCenter(PLOT_POSITIONS[entry.plotIndex]);
+	return storedCenter ?? getPlotInfo(entry.plotIndex).center;
+}
+
+export function getPlotRotationDegrees(player: Player): number {
+	const entry = playerPlots.get(player);
+	if (!entry) return 0;
+
+	const storedDegrees = entry.folder.GetAttribute("PlotRotationDegrees");
+	if (typeIs(storedDegrees, "number")) {
+		return normalizeDegrees(storedDegrees);
+	}
+
+	const storedQuarterTurns = entry.folder.GetAttribute("PlotRotationQuarterTurns");
+	if (typeIs(storedQuarterTurns, "number")) {
+		return normalizeDegrees(storedQuarterTurns * 90);
+	}
+
+	return getPlotInfo(entry.plotIndex).rotationDegrees;
+}
+
+export function getPlotRotationQuarterTurns(player: Player): number {
+	return normalizeQuarterTurns(getPlotRotationDegrees(player) / 90);
+}
+
+export function getNearestPlotPosition(worldPosition: Vector3): Vector3 {
+	let nearestCenter = getPlotInfo(0).center;
+	let bestDistance = math.huge;
+
+	for (let i = 0; i < PLOT_POSITIONS.size(); i++) {
+		const plotInfo = getPlotInfo(i);
+		const dx = plotInfo.center.X - worldPosition.X;
+		const dz = plotInfo.center.Z - worldPosition.Z;
+		const horizontalDistance = math.sqrt(dx * dx + dz * dz);
+
+		if (horizontalDistance < bestDistance) {
+			nearestCenter = plotInfo.center;
+			bestDistance = horizontalDistance;
+		}
+	}
+
+	return nearestCenter;
+}
+
+export function getNearestPlotRotationDegrees(worldPosition: Vector3): number {
+	let nearestRotationDegrees = 0;
+	let bestDistance = math.huge;
+
+	for (let i = 0; i < PLOT_POSITIONS.size(); i++) {
+		const plotInfo = getPlotInfo(i);
+		const dx = plotInfo.center.X - worldPosition.X;
+		const dz = plotInfo.center.Z - worldPosition.Z;
+		const horizontalDistance = math.sqrt(dx * dx + dz * dz);
+
+		if (horizontalDistance < bestDistance) {
+			nearestRotationDegrees = plotInfo.rotationDegrees;
+			bestDistance = horizontalDistance;
+		}
+	}
+
+	return nearestRotationDegrees;
+}
+
+export function getNearestPlotRotationQuarterTurns(worldPosition: Vector3): number {
+	return normalizeQuarterTurns(getNearestPlotRotationDegrees(worldPosition) / 90);
 }
 
 // Teleports a freshly spawned character to stand above the plot spawn anchor.

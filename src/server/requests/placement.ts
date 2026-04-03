@@ -1,10 +1,9 @@
 import { Workspace } from "@rbxts/services";
 import { getPlayerData } from "server/data";
+import { spawnMachine } from "server/factory";
 import { gridCoordToWorld, occupyCell, validatePlacement } from "server/grid";
-import { BaseConveyor } from "server/models/conveyors/baseConveyor";
-import { BaseMiner } from "server/models/miners/baseMiner";
-import { spawnTemplateModel } from "server/models/spawnUtils";
 import { getPlayerPlot, getPlotPosition } from "server/plot";
+import { registerMachine } from "server/services/machineRegistry";
 import { logger } from "server/utils/logger";
 import { MINING_CONFIG } from "shared/constants";
 import { getRemotes } from "shared/remotes";
@@ -104,32 +103,14 @@ export function initPlacementHandler(): void {
 
 		const safeSurfaceY = getSafeSurfaceY(player, plotFolder, surfaceY);
 		const worldCFrame = gridCoordToWorld(player, coord, machineType, safeSurfaceY, rotationQuarterTurns);
-		const spawned = spawnMachine(machineType, player, worldCFrame, plotFolder);
-		if (!spawned) {
+		const model = spawnMachine(machineType, player, worldCFrame, plotFolder);
+		if (!model) {
 			remotes.PlaceResponse.FireClient(player, { success: false, reason: "Unknown machine type" });
 			return;
 		}
 
 		occupyCell(player, coord, machineType);
+		registerMachine(player, machineType, model);
 		remotes.PlaceResponse.FireClient(player, { success: true });
 	});
-}
-
-function spawnMachine(machineType: string, player: Player, cframe: CFrame, plotFolder: Folder): boolean {
-	if (machineType === "BaseMiner") {
-		const miner = new BaseMiner("BaseMiner", player.UserId);
-		miner.dropSide = "front";
-		miner.spawn(cframe, plotFolder);
-		return true;
-	}
-	if (machineType === "Conveyor") {
-		const conveyor = new BaseConveyor();
-		conveyor.spawn(cframe, plotFolder);
-		return true;
-	}
-	if (machineType === "SellZone") {
-		spawnTemplateModel("SellZone", cframe, plotFolder);
-		return true;
-	}
-	return false;
 }

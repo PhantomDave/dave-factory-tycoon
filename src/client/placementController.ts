@@ -1,7 +1,7 @@
 import { Players, ReplicatedStorage, RunService, UserInputService, Workspace } from "@rbxts/services";
 import { GridCoord, PlaceRequest, GRID_CELL_SIZE, PLOT_SIZE, MACHINE_SIZES, DropSide } from "shared/types";
 import { getRemotes } from "shared/remotes";
-import { getPlotMinCorner, gridCoordToWorldPos, worldToGridCoord } from "shared/gridMath";
+import { gridCoordToWorldPos, worldToGridCoord } from "shared/gridMath";
 
 enum PlacementState {
 	IDLE = "IDLE",
@@ -246,7 +246,8 @@ class PlacementController {
 		if (!this.currentMachineType || this.cellHighlights.size() === 0) return;
 
 		const size = MACHINE_SIZES[this.currentMachineType] || { width: 1, height: 1 };
-		const plotMinCorner = getPlotMinCorner(plotCenter);
+		const plotRotationDegrees = this.getPlotRotationDegrees();
+		const cellRotation = CFrame.Angles(0, math.rad(plotRotationDegrees), 0);
 
 		let i = 0;
 		for (let x = 0; x < size.width; x++) {
@@ -260,10 +261,15 @@ class PlacementController {
 				const occupied = this.occupiedCells.has(`${cellX},${cellZ}`);
 				cell.Color = outOfBounds || occupied ? Color3.fromRGB(255, 70, 70) : Color3.fromRGB(0, 255, 140);
 
-				const worldX = plotMinCorner.X + (coord.x + x + 0.5) * GRID_CELL_SIZE;
-				const worldZ = plotMinCorner.Z + (coord.z + z + 0.5) * GRID_CELL_SIZE;
-
-				cell.CFrame = new CFrame(worldX, surfaceY + GRID_VISUAL_Y_OFFSET + 0.12, worldZ);
+				const cellWorldPos = gridCoordToWorldPos(
+					{ x: cellX, z: cellZ },
+					plotCenter,
+					"Conveyor",
+					plotRotationDegrees,
+				);
+				cell.CFrame = new CFrame(cellWorldPos.X, surfaceY + GRID_VISUAL_Y_OFFSET + 0.12, cellWorldPos.Z).mul(
+					cellRotation,
+				);
 			}
 		}
 	}
@@ -287,27 +293,22 @@ class PlacementController {
 		if (!plotCenter) return;
 
 		const plotSizeStuds = PLOT_SIZE * GRID_CELL_SIZE;
+		const plotRotationDegrees = this.getPlotRotationDegrees();
+		const rotation = CFrame.Angles(0, math.rad(plotRotationDegrees), 0);
 
-		const plotMinCorner = getPlotMinCorner(plotCenter);
-		const probeOrigin = new Vector3(
-			plotMinCorner.X + plotSizeStuds / 2,
-			plotCenter.Y + 100,
-			plotMinCorner.Z + plotSizeStuds / 2,
-		);
+		const probeOrigin = plotCenter.add(new Vector3(0, 100, 0));
 		const probeParams = new RaycastParams();
 		probeParams.FilterType = Enum.RaycastFilterType.Exclude;
 		probeParams.FilterDescendantsInstances = Players.LocalPlayer.Character ? [Players.LocalPlayer.Character] : [];
 		const probeResult = Workspace.Raycast(probeOrigin, new Vector3(0, -200, 0), probeParams);
 		const baseY = probeResult ? probeResult.Position.Y + GRID_VISUAL_Y_OFFSET : plotCenter.Y + GRID_VISUAL_Y_OFFSET;
+		const overlayCFrame = new CFrame(plotCenter.X, baseY, plotCenter.Z).mul(rotation);
+		const halfPlotSize = plotSizeStuds / 2;
 
 		const overlayPart = new Instance("Part");
 		overlayPart.Name = "GridOverlay";
 		overlayPart.Size = new Vector3(plotSizeStuds, 0.05, plotSizeStuds);
-		overlayPart.CFrame = new CFrame(
-			plotMinCorner.X + plotSizeStuds / 2,
-			baseY,
-			plotMinCorner.Z + plotSizeStuds / 2,
-		);
+		overlayPart.CFrame = overlayCFrame;
 		overlayPart.Anchored = true;
 		overlayPart.CanCollide = false;
 		overlayPart.CanQuery = false;
@@ -348,15 +349,14 @@ class PlacementController {
 		}
 
 		const cornerSize = 1.2;
-		const cornerY = baseY + 0.05;
 		const cornerColor = Color3.fromRGB(90, 160, 255);
 		const originColor = Color3.fromRGB(255, 210, 60);
 
-		const addCorner = (x: number, z: number, color = cornerColor) => {
+		const addCorner = (localX: number, localZ: number, color = cornerColor) => {
 			const marker = new Instance("Part");
 			marker.Name = "GridOverlayCorner";
 			marker.Size = new Vector3(cornerSize, 0.08, cornerSize);
-			marker.CFrame = new CFrame(x, cornerY, z);
+			marker.CFrame = overlayCFrame.mul(new CFrame(localX, 0.05, localZ));
 			marker.Anchored = true;
 			marker.CanCollide = false;
 			marker.CanQuery = false;
@@ -370,10 +370,8 @@ class PlacementController {
 		const originCellMarker = new Instance("Part");
 		originCellMarker.Name = "GridOriginMarker";
 		originCellMarker.Size = new Vector3(GRID_CELL_SIZE * 0.85, 0.1, GRID_CELL_SIZE * 0.85);
-		originCellMarker.CFrame = new CFrame(
-			plotMinCorner.X + GRID_CELL_SIZE / 2,
-			baseY + 0.06,
-			plotMinCorner.Z + GRID_CELL_SIZE / 2,
+		originCellMarker.CFrame = overlayCFrame.mul(
+			new CFrame(-halfPlotSize + GRID_CELL_SIZE / 2, 0.06, -halfPlotSize + GRID_CELL_SIZE / 2),
 		);
 		originCellMarker.Anchored = true;
 		originCellMarker.CanCollide = false;
@@ -401,10 +399,10 @@ class PlacementController {
 		originText.Font = Enum.Font.GothamBold;
 		originText.Parent = originBillboard;
 
-		addCorner(plotMinCorner.X, plotMinCorner.Z, originColor);
-		addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z);
-		addCorner(plotMinCorner.X, plotMinCorner.Z + plotSizeStuds);
-		addCorner(plotMinCorner.X + plotSizeStuds, plotMinCorner.Z + plotSizeStuds);
+		addCorner(-halfPlotSize, -halfPlotSize, originColor);
+		addCorner(halfPlotSize, -halfPlotSize);
+		addCorner(-halfPlotSize, halfPlotSize);
+		addCorner(halfPlotSize, halfPlotSize);
 
 		this.gridOverlay = overlayPart;
 		print(`Grid overlay created at (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z})`);
@@ -415,36 +413,6 @@ class PlacementController {
 			this.gridOverlay.Destroy();
 			this.gridOverlay = undefined;
 		}
-	}
-
-	private resolveBuildPlotCenter(anchor: Vector3): Vector3 {
-		let bestPart: BasePart | undefined;
-		let bestDistance = math.huge;
-		const plotSizeStuds = PLOT_SIZE * GRID_CELL_SIZE;
-
-		for (const descendant of Workspace.GetDescendants()) {
-			if (!descendant.IsA("BasePart") || !descendant.Anchored || descendant.Size.Y > 5) {
-				continue;
-			}
-
-			const matchesX = math.abs(descendant.Size.X - plotSizeStuds) <= 6;
-			const matchesZ = math.abs(descendant.Size.Z - plotSizeStuds) <= 6;
-			if (!matchesX || !matchesZ) {
-				continue;
-			}
-
-			const dx = descendant.Position.X - anchor.X;
-			const dz = descendant.Position.Z - anchor.Z;
-			const horizontalDistance = math.sqrt(dx * dx + dz * dz);
-			if (horizontalDistance > 80 || horizontalDistance >= bestDistance) {
-				continue;
-			}
-
-			bestPart = descendant;
-			bestDistance = horizontalDistance;
-		}
-
-		return bestPart?.Position ?? anchor;
 	}
 
 	private getPlotOrigin(): Vector3 | undefined {
@@ -470,15 +438,36 @@ class PlacementController {
 			return undefined;
 		}
 
-		return this.resolveBuildPlotCenter(fallback);
+		return fallback;
+	}
+
+	private getPlotRotationDegrees(): number {
+		const player = Players.LocalPlayer;
+		const plotNumber = player.GetAttribute("PlotNumber") as number | undefined;
+		if (plotNumber === undefined) {
+			return 0;
+		}
+
+		const plotFolder = Workspace.FindFirstChild(`Plot_${plotNumber}`);
+		if (!plotFolder || !plotFolder.IsA("Folder")) {
+			return 0;
+		}
+
+		const storedDegrees = plotFolder.GetAttribute("PlotRotationDegrees");
+		if (typeIs(storedDegrees, "number")) {
+			return ((storedDegrees % 360) + 360) % 360;
+		}
+
+		const storedQuarterTurns = plotFolder.GetAttribute("PlotRotationQuarterTurns");
+		return typeIs(storedQuarterTurns, "number") ? (((storedQuarterTurns * 90) % 360) + 360) % 360 : 0;
 	}
 
 	private worldToGrid(worldPos: Vector3, plotOrigin: Vector3): GridCoord {
-		return worldToGridCoord(worldPos, plotOrigin, this.currentMachineType);
+		return worldToGridCoord(worldPos, plotOrigin, this.currentMachineType, this.getPlotRotationDegrees());
 	}
 
 	private gridToWorld(coord: GridCoord, plotOrigin: Vector3, machineType: string): CFrame {
-		const worldPos = gridCoordToWorldPos(coord, plotOrigin, machineType);
+		const worldPos = gridCoordToWorldPos(coord, plotOrigin, machineType, this.getPlotRotationDegrees());
 		return new CFrame(worldPos);
 	}
 
@@ -654,7 +643,9 @@ class PlacementController {
 			const snappedCFrame = this.gridToWorld(gridCoord, plotOrigin, this.currentMachineType);
 			const liftedY = surfaceY + this.ghostHeightOffset;
 			const baseCFrame = new CFrame(snappedCFrame.Position.X, liftedY, snappedCFrame.Position.Z);
-			const rotation = CFrame.Angles(0, math.rad(this.rotationQuarterTurns * 90), 0);
+			const plotRotationDegrees = this.getPlotRotationDegrees();
+			const absoluteRotationDegrees = plotRotationDegrees + this.rotationQuarterTurns * 90;
+			const rotation = CFrame.Angles(0, math.rad(absoluteRotationDegrees), 0);
 			this.ghostModel.PivotTo(baseCFrame.mul(rotation));
 
 			const isValid = this.isValidGridCoord(gridCoord, this.currentMachineType);

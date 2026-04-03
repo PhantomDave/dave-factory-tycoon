@@ -1,5 +1,7 @@
 import { Players, Workspace } from "@rbxts/services";
 import { addCoins, getBalance } from "server/data";
+import { registerSpawner } from "server/factory";
+import { spawnTemplateModel } from "server/models/spawnUtils";
 import { getRemotes } from "shared/remotes";
 import { SELL_ZONE_CONFIG } from "shared/constants";
 
@@ -11,7 +13,7 @@ const SELL_ZONE_GLOW_NAME = "SellZoneGlow";
 const SELL_ZONE_DEEP_RED = Color3.fromRGB(120, 0, 0);
 
 export class SellZone {
-    remotes = getRemotes();
+	remotes = getRemotes();
 
 	constructor(private readonly zonePart: BasePart) {}
 
@@ -112,3 +114,7 @@ export function initializeSellZones(): void {
 
 	Workspace.DescendantAdded.Connect((instance) => bindZone(instance));
 }
+
+registerSpawner("SellZone", (_player, cframe, plotFolder) => {
+	return spawnTemplateModel("SellZone", cframe, plotFolder);
+});

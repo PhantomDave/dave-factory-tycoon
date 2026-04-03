@@ -1,10 +1,14 @@
-import { getPlotPosition } from "server/plot";
+import { getPlotPosition, getPlotRotationDegrees } from "server/plot";
 import { gridCoordToWorldPos } from "shared/gridMath";
 import { DropSide, GridCoord, MACHINE_SIZES, PLOT_SIZE } from "shared/types";
 import { logger } from "./utils/logger";
 
 const occupancy = new Map<Player, Set<string>>();
 const cellType = new Map<Player, Map<string, string>>();
+
+function normalizeDegrees(value: number): number {
+	return ((value % 360) + 360) % 360;
+}
 
 function ensurePlayerGrid(player: Player): { occupied: Set<string>; types: Map<string, string> } {
 	let occupied = occupancy.get(player);
@@ -39,16 +43,20 @@ export function gridCoordToWorld(
 	rotationQuarterTurns = 0,
 ): CFrame {
 	const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
-	const worldPos = gridCoordToWorldPos(coord, plotCenter, machineType);
+	const plotRotationDegrees = getPlotRotationDegrees(player);
+	const worldPos = gridCoordToWorldPos(coord, plotCenter, machineType, plotRotationDegrees);
 	const worldY = surfaceY ?? plotCenter.Y;
+	const absoluteRotationDegrees = normalizeDegrees(plotRotationDegrees + rotationQuarterTurns * 90);
 	const baseCFrame = new CFrame(worldPos.X, worldY, worldPos.Z);
-	const rotation = CFrame.Angles(0, math.rad((rotationQuarterTurns % 4) * 90), 0);
+	const rotation = CFrame.Angles(0, math.rad(absoluteRotationDegrees), 0);
 	const worldCFrame = baseCFrame.mul(rotation);
 
 	logger.debug(
 		`Player: ${player.Name}, Grid: (${coord.x}, ${coord.z}) -> World: (${worldPos.X}, ${worldY}, ${worldPos.Z})`,
 	);
-	logger.debug(`Plot Center: (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z})`);
+	logger.debug(
+		`Plot Center: (${plotCenter.X}, ${plotCenter.Y}, ${plotCenter.Z}), Plot Rotation: ${plotRotationDegrees}°`,
+	);
 
 	return worldCFrame;
 }
