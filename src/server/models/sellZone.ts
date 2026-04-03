@@ -1,8 +1,7 @@
 import { Players, Workspace } from "@rbxts/services";
-import { addCoins, getBalance } from "server/data";
+import { addCoins } from "server/data";
 import { registerSpawner } from "server/factory";
 import { spawnTemplateModel } from "server/models/spawnUtils";
-import { getRemotes } from "shared/remotes";
 import { SELL_ZONE_CONFIG } from "shared/constants";
 
 const SELL_ZONE_NAME = "SellZone";
@@ -13,8 +12,6 @@ const SELL_ZONE_GLOW_NAME = "SellZoneGlow";
 const SELL_ZONE_DEEP_RED = Color3.fromRGB(120, 0, 0);
 
 export class SellZone {
-	remotes = getRemotes();
-
 	constructor(private readonly zonePart: BasePart) {}
 
 	bind(): RBXScriptConnection {
@@ -48,8 +45,6 @@ export class SellZone {
 		}
 
 		addCoins(owner, productValue);
-		this.remotes.UpdateBalance.FireClient(owner, getBalance(owner));
-
 		productModel.Destroy();
 	}
 

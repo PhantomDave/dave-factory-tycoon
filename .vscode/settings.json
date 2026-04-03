@@ -1,4 +1,10 @@
 {
+	"terminal.integrated.defaultProfile.linux": "fish",
+	"terminal.integrated.profiles.linux": {
+		"fish": {
+			"path": "/usr/bin/fish"
+		}
+	},
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"files.eol": "\n",
 	"[typescript]": {

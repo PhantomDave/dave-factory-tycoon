@@ -4,18 +4,22 @@
 		"dockerfile": "Dockerfile"
 	},
 
-	"mounts": [
-		"source=${localEnv:HOME}/.ssh,target=/home/bun/.ssh,type=bind,consistency=cached"
-	],
+	"mounts": ["source=${localEnv:HOME}/.ssh,target=/home/bun/.ssh,type=bind,consistency=cached"],
 
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"roblox-ts.vscode-roblox-ts",
+				"evaera.vscode-rojo",
+				"muoshuu.rojo-ui",
+				"nightrains.robloxlsp",
+				"otadtoad.rblx-react-lsp",
 				"dbaeumer.vscode-eslint",
 				"esbenp.prettier-vscode",
 				"oven.bun-vscode",
-				"ms-vscode.vscode-typescript-next"
+				"ms-vscode.vscode-typescript-next",
+				"github.copilot-chat",
+				"github.vscode-pull-request-github"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "fish",
@@ -42,6 +46,7 @@
 	},
 
 	"postCreateCommand": "bun install",
+	"postStartCommand": "/bin/sh .devcontainer/start-services.sh",
 
 	"remoteUser": "bun"
 }

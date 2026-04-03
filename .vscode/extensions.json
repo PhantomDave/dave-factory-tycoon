@@ -1,8 +1,15 @@
 {
 	"recommendations": [
 		"roblox-ts.vscode-roblox-ts",
+		"evaera.vscode-rojo",
+		"muoshuu.rojo-ui",
+		"nightrains.robloxlsp",
+		"otadtoad.rblx-react-lsp",
 		"dbaeumer.vscode-eslint",
 		"esbenp.prettier-vscode",
-		"oven.bun-vscode"
+		"oven.bun-vscode",
+		"ms-vscode.vscode-typescript-next",
+		"github.copilot-chat",
+		"github.vscode-pull-request-github"
 	]
 }

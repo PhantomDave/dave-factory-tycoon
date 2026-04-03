@@ -4,11 +4,8 @@
 		{
 			"label": "rojo: serve",
 			"type": "shell",
-			"command": "rojo serve ",
+			"command": "sudo -n supervisorctl -c /workspaces/roblox-test/.devcontainer/supervisord.conf restart rojo",
 			"problemMatcher": [],
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -18,11 +15,8 @@
 		{
 			"label": "rbxtsc: watch",
 			"type": "shell",
-			"command": "bun run watch",
+			"command": "sudo -n supervisorctl -c /workspaces/roblox-test/.devcontainer/supervisord.conf restart rbxtsc-watch",
 			"problemMatcher": [],
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",

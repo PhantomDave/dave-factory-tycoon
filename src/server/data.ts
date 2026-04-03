@@ -5,6 +5,7 @@ import {
 	getNearestPlotRotationDegrees,
 	getPlayerPlot,
 	getPlotPosition,
+	getPlotSurfaceY,
 	releasePlot,
 	spawnPlayerAtPlot,
 } from "server/plot";
@@ -27,13 +28,13 @@ function normalizeQuarterTurns(value: number): number {
 }
 
 function getSavedRotationQuarterTurns(machine: MachineData, legacyPlotRotationDegrees = 0): number {
-	if (machine.rotationQuarterTurns !== undefined) {
-		return normalizeQuarterTurns(machine.rotationQuarterTurns);
-	}
-
 	if (machine.rotation !== undefined) {
 		const worldRotationQuarterTurns = (math.deg(machine.rotation.RY) - legacyPlotRotationDegrees) / 90;
 		return normalizeQuarterTurns(worldRotationQuarterTurns);
+	}
+
+	if (machine.rotationQuarterTurns !== undefined) {
+		return normalizeQuarterTurns(machine.rotationQuarterTurns);
 	}
 
 	return 0;
@@ -75,6 +76,7 @@ function reconstructMachines(player: Player, machines: MachineData[]): void {
 	}
 
 	const plotCenter = getPlotPosition(player) ?? new Vector3(0, 0, 0);
+	const plotSurfaceY = getPlotSurfaceY(player, plotFolder);
 
 	for (const machine of machines) {
 		const savedPlacement = getSavedMachinePlacement(machine, plotCenter);
@@ -84,17 +86,11 @@ function reconstructMachines(player: Player, machines: MachineData[]): void {
 		}
 
 		const rotationQuarterTurns = getSavedRotationQuarterTurns(machine, savedPlacement.legacyPlotRotationDegrees);
-		const cf = gridCoordToWorld(
-			player,
-			savedPlacement.coord,
-			machine.id,
-			savedPlacement.surfaceY,
-			rotationQuarterTurns,
-		);
+		const cf = gridCoordToWorld(player, savedPlacement.coord, machine.id, plotSurfaceY, rotationQuarterTurns);
 
 		const model = spawnMachine(machine.id, player, cf, plotFolder);
 		if (model) {
-			registerMachine(player, machine.id, model);
+			registerMachine(player, machine.id, model, rotationQuarterTurns);
 			occupyCell(player, savedPlacement.coord, machine.id);
 		} else {
 			logger.warn(`Unknown machine type '${machine.id}' for ${player.Name}; skipping`);
@@ -189,6 +185,10 @@ export function addCoins(player: Player, amount: number): void {
 	playerService.addCoins(player, amount);
 }
 
+export function setBalance(player: Player, amount: number): void {
+	playerService.setCoins(player, amount);
+}
+
 export function getBalance(player: Player): number {
 	return playerService.getBalance(player);
 }
@@ -210,15 +210,15 @@ export function wipePlayerData(player: Player): boolean {
 	clearPlayerGrid(player);
 	initPlayerGrid(player);
 
-	data.coins = 0;
 	data.multiplier = 1;
 	data.unlockedUpgrades = [];
 	data.machines = [];
 	data.lastChecked = os.time();
 
+	setBalance(player, 0);
+
 	const wasDeleted = deleteData(player.UserId);
 	const remotes = getRemotes();
-	remotes.UpdateBalance.FireClient(player, data.coins);
 	remotes.UpdateMultiplier.FireClient(player, data.multiplier);
 
 	logger.warn(`${player.Name} wiped their saved data`);

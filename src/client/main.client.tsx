@@ -1,6 +1,6 @@
 import { Players } from "@rbxts/services";
 import { getRemotes } from "shared/remotes";
-import React, { StrictMode, useState } from "@rbxts/react";
+import React, { StrictMode, useEffect, useState } from "@rbxts/react";
 import { createPortal, createRoot } from "@rbxts/react-roblox";
 import { GameUI } from "./ui/components/GameUI";
 import { placementController } from "./placementController";
@@ -9,20 +9,39 @@ const player = Players.LocalPlayer;
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui;
 const remotes = getRemotes();
 
+function getInitialBalance(): number {
+	const leaderstats = player.FindFirstChild("leaderstats");
+	if (!leaderstats || !leaderstats.IsA("Folder")) {
+		return 0;
+	}
+
+	const cashValue = leaderstats.FindFirstChild("Cash");
+	if (!cashValue || !cashValue.IsA("IntValue")) {
+		return 0;
+	}
+
+	return cashValue.Value;
+}
+
 function GameUIWrapper() {
-	const [balance, setBalance] = useState(0);
-	const [multiplier, setMultiplier] = useState(1);
+	const [balance, setBalance] = useState(getInitialBalance());
 	const [shopOpen, setShopOpen] = useState(false);
 
-	// Listen for balance updates from server
-	remotes.UpdateBalance.OnClientEvent.Connect((newBalance: number) => {
-		setBalance(newBalance);
-	});
+	useEffect(() => {
+		const balanceConnection = remotes.UpdateBalance.OnClientEvent.Connect((newBalance: number) => {
+			setBalance(newBalance);
+		});
 
-	// Listen for multiplier updates from server
-	remotes.UpdateMultiplier.OnClientEvent.Connect((newMultiplier: number) => {
-		setMultiplier(newMultiplier);
-	});
+		task.spawn(() => {
+			const leaderstats = player.WaitForChild("leaderstats") as Folder;
+			const cashValue = leaderstats.WaitForChild("Cash") as IntValue;
+			setBalance(cashValue.Value);
+		});
+
+		return () => {
+			balanceConnection.Disconnect();
+		};
+	}, []);
 
 	const handleToggleShop = () => {
 		setShopOpen((prev) => !prev);
@@ -39,7 +58,6 @@ function GameUIWrapper() {
 	return (
 		<GameUI
 			balance={balance}
-			multiplier={multiplier}
 			shopOpen={shopOpen}
 			onToggleShop={handleToggleShop}
 			onBuyUpgrade={handleBuyUpgrade}
