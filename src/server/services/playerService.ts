@@ -12,6 +12,10 @@ const remotes = getRemotes();
 const LEADERSTATS_NAME = "leaderstats";
 const CASH_STAT_NAME = "Cash";
 
+function normalizeCoins(value: number): number {
+	return math.max(0, math.round(value));
+}
+
 function ensureLeaderstats(player: Player): Folder {
 	const existing = player.FindFirstChild(LEADERSTATS_NAME);
 	if (existing && existing.IsA("Folder")) {
@@ -47,7 +51,7 @@ export class PlayerService {
 	addPlayer(player: Player, saved?: Partial<SavedPlayerData>): void {
 		this.playerData.set(player, {
 			playerId: player.UserId,
-			coins: saved?.coins ?? 0,
+			coins: normalizeCoins(saved?.coins ?? 0),
 			multiplier: saved?.multiplier ?? 1,
 			unlockedUpgrades: saved?.unlockedUpgrades ?? [],
 			lastChecked: os.time(),
@@ -74,7 +78,7 @@ export class PlayerService {
 			return 0;
 		}
 
-		data.coins += amount;
+		data.coins = normalizeCoins(data.coins + amount);
 		this.syncBalance(player);
 		return data.coins;
 	}
@@ -85,7 +89,7 @@ export class PlayerService {
 			return 0;
 		}
 
-		data.coins = amount;
+		data.coins = normalizeCoins(amount);
 		this.syncBalance(player);
 		return data.coins;
 	}
@@ -96,9 +100,12 @@ export class PlayerService {
 			return;
 		}
 
+		const normalizedCoins = normalizeCoins(data.coins);
+		data.coins = normalizedCoins;
+
 		const cashStat = ensureCashStat(player);
-		cashStat.Value = math.max(0, math.round(data.coins));
-		remotes.UpdateBalance.FireClient(player, data.coins);
+		cashStat.Value = normalizedCoins;
+		remotes.UpdateBalance.FireClient(player, normalizedCoins);
 	}
 
 	getBalance(player: Player): number {
