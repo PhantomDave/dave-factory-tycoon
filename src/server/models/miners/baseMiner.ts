@@ -1,3 +1,4 @@
+import { registerSpawner } from "server/factory";
 import { MinerClass } from "server/models/miners/minerClass";
 import { WoodCube } from "server/models/products/woodCube";
 import { MINING_CONFIG } from "shared/constants";
@@ -19,3 +20,10 @@ export class BaseMiner extends MinerClass {
 		this.startMining();
 	}
 }
+
+registerSpawner("BaseMiner", (player, cframe, plotFolder) => {
+	const miner = new BaseMiner("BaseMiner", player.UserId);
+	miner.dropSide = "front";
+	miner.spawn(cframe, plotFolder);
+	return miner.model;
+});

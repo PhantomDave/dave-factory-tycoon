@@ -1,11 +1,19 @@
 import { UPGRADE_CONFIG } from "shared/constants";
 
+export interface MachineData {
+	id: string;
+	position: { X: number; Y: number; Z: number };
+	rotation: { RX: number; RY: number; RZ: number };
+	state: string;
+}
+
 export interface PlayerData {
 	playerId: number;
 	coins: number;
 	multiplier: number;
 	unlockedUpgrades: string[];
 	lastChecked: number;
+	machines: MachineData[];
 }
 
 interface BaseUpgrade {
@@ -37,26 +45,25 @@ export interface SpawnerUpgrade extends BaseUpgrade {
 }
 
 export interface GridCoord {
-  x: number;
-  z: number;
+	x: number;
+	z: number;
 }
 
 /** Which face of a miner products are ejected toward. */
 export type DropSide = "top" | "front" | "back" | "left" | "right";
 
-
 export interface PlaceRequest {
-  machineType: string;
-  coord: GridCoord;
-  /** Top-surface Y from the client's raycast, used by the server to sit models on the plate. */
-  surfaceY: number;
+	machineType: string;
+	coord: GridCoord;
+	/** Top-surface Y from the client's raycast, used by the server to sit models on the plate. */
+	surfaceY: number;
 	/** Number of clockwise 90-degree turns (0-3) applied during placement. */
 	rotationQuarterTurns: number;
 }
 
 export interface PlaceResponse {
-  success: boolean;
-  reason?: string;
+	success: boolean;
+	reason?: string;
 }
 
 export const PLOT_SIZE = 50; // 50x50 cells per plot
