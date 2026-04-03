@@ -20,6 +20,8 @@ import type { GridCoord, MachineData } from "shared/types";
 
 export const playerService = new PlayerService();
 
+let isInitialized = false;
+
 function normalizeQuarterTurns(value: number): number {
 	return ((math.round(value) % 4) + 4) % 4;
 }
@@ -154,22 +156,29 @@ function onPlayerRemoving(player: Player) {
 	}
 }
 
-Players.PlayerAdded.Connect(onPlayerAdded);
-Players.PlayerRemoving.Connect(onPlayerRemoving);
-
-// Save all remaining players on server shutdown before DataStores close.
-game.BindToClose(() => {
-	for (const player of Players.GetPlayers()) {
-		if (playerService.getPlayer(player)) {
-			savePlayerData(player);
-		}
+export function initializePlayerData(): void {
+	if (isInitialized) {
+		return;
 	}
-});
 
-// In Studio solo mode the local player may already exist before this
-// script runs, so iterate existing players to catch them.
-for (const player of Players.GetPlayers()) {
-	onPlayerAdded(player);
+	isInitialized = true;
+	Players.PlayerAdded.Connect(onPlayerAdded);
+	Players.PlayerRemoving.Connect(onPlayerRemoving);
+
+	// Save all remaining players on server shutdown before DataStores close.
+	game.BindToClose(() => {
+		for (const player of Players.GetPlayers()) {
+			if (playerService.getPlayer(player)) {
+				savePlayerData(player);
+			}
+		}
+	});
+
+	// In Studio solo mode the local player may already exist before this
+	// script runs, so iterate existing players to catch them.
+	for (const player of Players.GetPlayers()) {
+		onPlayerAdded(player);
+	}
 }
 
 export function getPlayerData(player: Player) {

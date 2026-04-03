@@ -1,5 +1,5 @@
-import { Players } from "@rbxts/services";
-import { wipePlayerData } from "server/data";
+import { Players, RunService } from "@rbxts/services";
+import { initializePlayerData, wipePlayerData } from "server/data";
 import { initializeSellZones } from "server/models/sellZone";
 import { onBuyUpgrade } from "server/upgrade";
 import { logger } from "server/utils/logger";
@@ -13,13 +13,21 @@ import "server/models/conveyors/baseConveyor";
 // server/models/sellZone is already imported above via initializeSellZones
 
 const WIPE_DATA_COMMANDS = new Set(["/wipe", "!wipe", "/resetdata", "!resetdata"]);
+const WIPE_COMMAND_ALLOWED_USER_IDS = new Set<number>();
 
-logger.info("Server starting...");
+function canUseWipeDataCommand(player: Player): boolean {
+	return RunService.IsStudio() || WIPE_COMMAND_ALLOWED_USER_IDS.has(player.UserId);
+}
 
-Players.PlayerAdded.Connect((player) => {
+function attachWipeCommandListener(player: Player): void {
 	player.Chatted.Connect((message) => {
 		const command = message.lower().split(" ")[0];
 		if (!WIPE_DATA_COMMANDS.has(command)) {
+			return;
+		}
+
+		if (!canUseWipeDataCommand(player)) {
+			logger.warn(`Blocked wipe data command from ${player.Name}`);
 			return;
 		}
 
@@ -35,7 +43,18 @@ Players.PlayerAdded.Connect((player) => {
 			logger.error(`Wipe data command failed for ${player.Name}: ${tostring(err)}`);
 		}
 	});
+}
+
+logger.info("Server starting...");
+initializePlayerData();
+
+Players.PlayerAdded.Connect((player) => {
+	attachWipeCommandListener(player);
 });
+
+for (const player of Players.GetPlayers()) {
+	attachWipeCommandListener(player);
+}
 
 task.spawn(() => {
 	const remotes = getRemotes();
