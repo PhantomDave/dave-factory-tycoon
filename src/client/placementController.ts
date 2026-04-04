@@ -625,10 +625,19 @@ class PlacementController {
 
 		const raycastParams = new RaycastParams();
 		raycastParams.FilterType = Enum.RaycastFilterType.Exclude;
-		// Exclude the ghost and preview markers so the ray hits the plate, not our own parts.
+		// Exclude the ghost, preview markers, and all placed items (products) so the ray hits the plot/pavement.
 		const filterInstances = [this.ghostModel, ...this.cellHighlights] as Instance[];
 		if (this.dropSideIndicator) filterInstances.push(this.dropSideIndicator);
 		if (this.dropSpawnMarker) filterInstances.push(this.dropSpawnMarker);
+		// Exclude all tracked items (products like wood cubes) so raycast passes through them
+		for (const descendant of Workspace.GetDescendants()) {
+			if (descendant.IsA("Model")) {
+				const trackedId = descendant.GetAttribute("ItemMovementId");
+				if (typeIs(trackedId, "string") && trackedId.size() > 0) {
+					filterInstances.push(descendant);
+				}
+			}
+		}
 		raycastParams.FilterDescendantsInstances = filterInstances;
 
 		const raycastResult = Workspace.Raycast(unitRay.Origin, unitRay.Direction.mul(1000), raycastParams);
@@ -690,6 +699,15 @@ class PlacementController {
 		const filterInstances = [this.ghostModel, ...this.cellHighlights] as Instance[];
 		if (this.dropSideIndicator) filterInstances.push(this.dropSideIndicator);
 		if (this.dropSpawnMarker) filterInstances.push(this.dropSpawnMarker);
+		// Exclude all tracked items (products like wood cubes) so raycast passes through them
+		for (const descendant of Workspace.GetDescendants()) {
+			if (descendant.IsA("Model")) {
+				const trackedId = descendant.GetAttribute("ItemMovementId");
+				if (typeIs(trackedId, "string") && trackedId.size() > 0) {
+					filterInstances.push(descendant);
+				}
+			}
+		}
 		raycastParams.FilterDescendantsInstances = filterInstances;
 
 		const raycastResult = Workspace.Raycast(unitRay.Origin, unitRay.Direction.mul(1000), raycastParams);

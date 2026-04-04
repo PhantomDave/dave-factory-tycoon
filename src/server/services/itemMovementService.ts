@@ -184,3 +184,12 @@ export function unregisterTrackedItem(itemModel: Model): void {
 
 	trackedItems.delete(existingItemId);
 }
+
+export function setItemNetworkOwner(itemModel: Model, networkOwner: Player | undefined): void {
+	const primaryPart = getPrimaryPart(itemModel);
+	if (!primaryPart) {
+		return;
+	}
+
+	primaryPart.SetNetworkOwner(networkOwner);
+}

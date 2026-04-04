@@ -22,6 +22,8 @@ function createClientVisual(serverModel: Model): Model {
 		if (desc.IsA("BasePart")) {
 			const part = desc as BasePart;
 			part.CanCollide = false;
+			part.CanQuery = false;
+			part.CastShadow = false;
 			part.Anchored = true;
 			part.SetAttribute("ClientVisual", true);
 		}
@@ -95,6 +97,8 @@ function updateTrackedItem(update: ItemMovementSnapshot): void {
 
 function renderTrackedItems(): void {
 	const now = Workspace.GetServerTimeNow();
+	const modelsToMove: Model[] = [];
+	const targetCFrames: CFrame[] = [];
 
 	for (const [itemId, trackedItem] of trackedItems) {
 		// Cleanup unresolved entries after timeout
@@ -108,10 +112,25 @@ function renderTrackedItems(): void {
 
 		if (trackedItem.visual) {
 			const currentPivot = trackedItem.visual.GetPivot();
-			trackedItem.visual.PivotTo(new CFrame(nextPosition).mul(currentPivot.Rotation));
+			const targetCFrame = new CFrame(nextPosition).mul(currentPivot.Rotation);
+			modelsToMove.push(trackedItem.visual);
+			targetCFrames.push(targetCFrame);
 		} else if (trackedItem.model) {
 			// If we have the server model but no visual clone yet, create one now
 			trackedItem.visual = createClientVisual(trackedItem.model);
+		}
+	}
+
+	// Use BulkMoveTo for efficient batch movement of all items if available
+	if (modelsToMove.size() > 0) {
+		const workspaceAny = Workspace as unknown as { BulkMoveTo?: (models: Model[], cframes: CFrame[]) => void };
+		if (workspaceAny.BulkMoveTo) {
+			workspaceAny.BulkMoveTo(modelsToMove, targetCFrames);
+		} else {
+			// Fallback for environments without BulkMoveTo: batch movements by collecting and moving together
+			for (let i = 0; i < modelsToMove.size(); i++) {
+				modelsToMove[i].PivotTo(targetCFrames[i]);
+			}
 		}
 	}
 }
