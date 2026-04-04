@@ -22,7 +22,6 @@ function createClientVisual(serverModel: Model): Model {
 		if (desc.IsA("BasePart")) {
 			const part = desc as BasePart;
 			part.CanCollide = false;
-			part.CanTouch = false;
 			part.CanQuery = false;
 			part.CastShadow = false;
 			part.Anchored = true;

@@ -18,7 +18,6 @@ export class WoodCube implements Product {
 		part.Material = Enum.Material.Wood;
 		part.BrickColor = new BrickColor("Brown");
 		part.CanCollide = true;
-		part.CanTouch = false;
 		part.CanQuery = false;
 		part.CastShadow = false;
 		part.Anchored = false;
