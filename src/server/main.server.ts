@@ -1,4 +1,4 @@
-import { Players, RunService } from "@rbxts/services";
+import { Players, RunService, Workspace } from "@rbxts/services";
 import { initializePlayerData, wipePlayerData } from "server/data";
 import { initializeSellZones } from "server/models/sellZone";
 import { onBuyUpgrade } from "server/upgrade";
@@ -47,6 +47,10 @@ function attachWipeCommandListener(player: Player): void {
 
 logger.info("Server starting...");
 initializePlayerData();
+
+// Enable StreamingEnabled for better performance with many parts
+const workspaceAny = Workspace as unknown as { StreamingEnabled: boolean };
+workspaceAny.StreamingEnabled = true;
 
 Players.PlayerAdded.Connect((player) => {
 	attachWipeCommandListener(player);

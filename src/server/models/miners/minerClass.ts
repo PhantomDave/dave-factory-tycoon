@@ -1,7 +1,9 @@
 import { spawnTemplateModel } from "server/models/spawnUtils";
 import type { Product } from "server/models/products/Products";
+import { setItemNetworkOwner } from "server/services/itemMovementService";
 import { GRID_CELL_SIZE } from "shared/types";
 import type { DropSide } from "shared/types";
+import { Players } from "@rbxts/services";
 
 export abstract class MinerClass {
 	value: number;
@@ -73,6 +75,12 @@ export abstract class MinerClass {
 			if (primaryPart) {
 				primaryPart.SetAttribute("ProductOwnerUserId", this.ownerUserId);
 				primaryPart.SetAttribute("ProductValue", this.product.value);
+			}
+
+			// Set network ownership to the product owner for better streaming performance
+			const player = Players.GetPlayerByUserId(this.ownerUserId);
+			if (player) {
+				setItemNetworkOwner(spawnedProduct, player);
 			}
 		}
 
