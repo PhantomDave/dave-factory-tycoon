@@ -17,7 +17,7 @@ export class WoodCube implements Product {
 		part.Size = new Vector3(2, 2, 2);
 		part.Material = Enum.Material.Wood;
 		part.BrickColor = new BrickColor("Brown");
-		part.CanCollide = false;
+		part.CanCollide = true;
 		part.CanTouch = false;
 		part.CanQuery = false;
 		part.CastShadow = false;
