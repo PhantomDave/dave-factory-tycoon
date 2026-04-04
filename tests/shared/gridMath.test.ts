@@ -1,3 +1,11 @@
+// Import setup manually to ensure globals are defined
+import "../setup/roblox-globals";
+
+// Now Vector3 should be available
+if (!(global as any).Vector3) {
+	throw new Error("Vector3 not available after importing setup");
+}
+
 import { gridCoordToWorldPos, getPlotMinCorner, worldToGridCoord } from "shared/gridMath";
 
 // Convenience alias so tests read as Vector3(x, y, z)

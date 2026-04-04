@@ -17,13 +17,7 @@ jest.mock("shared/gridMath", () => ({
 	gridCoordToWorldPos: jest.fn(() => new (global as any).Vector3(0, 0, 0)),
 }));
 
-import {
-	clearPlayerGrid,
-	getAdjacentDropSide,
-	initPlayerGrid,
-	occupyCell,
-	validatePlacement,
-} from "server/grid";
+import { clearPlayerGrid, getAdjacentDropSide, initPlayerGrid, occupyCell, validatePlacement } from "server/grid";
 
 // ---------------------------------------------------------------------------
 // Helpers
