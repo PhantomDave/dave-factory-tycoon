@@ -70,17 +70,25 @@ export function getRecipeByResult(resultId: ItemID): Recipe | undefined {
 }
 
 /**
+ * Returns true when `id` is a known RecipeID.
+ * Use this to guard untrusted string inputs (e.g. remote payloads) before calling `canCraft`.
+ */
+export function isRecipeID(id: string): id is RecipeID {
+	return (RECIPES as Record<string, Recipe | undefined>)[id] !== undefined;
+}
+
+/**
  * Check whether the given ingredient map satisfies the requirements of a recipe.
- * @param recipeId  Key into RECIPES.
+ * @param recipeId  A valid RecipeID key. Use `isRecipeID` to guard untrusted string inputs.
  * @param available Map of available item IDs to their quantities.
  * @returns true when every required ingredient is present in sufficient quantity.
  */
-export function canCraft(recipeId: string, available: Partial<Record<ItemID, number>>): boolean {
-	const recipe = (RECIPES as Record<string, Recipe | undefined>)[recipeId];
-	if (!recipe) return false;
+export function canCraft(recipeId: RecipeID, available: Partial<Record<ItemID, number>>): boolean {
+	const recipe = RECIPES[recipeId];
 
-	for (const [itemId, required] of pairs(recipe.ingredients) as unknown as [ItemID, number][]) {
-		const have = available[itemId] ?? 0;
+	for (const [itemId, required] of pairs(recipe.ingredients)) {
+		if (required === undefined) continue;
+		const have = available[itemId as ItemID] ?? 0;
 		if (have < required) return false;
 	}
 	return true;

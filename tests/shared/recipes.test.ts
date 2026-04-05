@@ -1,4 +1,4 @@
-import { RECIPES, canCraft, getRecipeByResult } from "shared/recipes";
+import { RECIPES, canCraft, getRecipeByResult, isRecipeID } from "shared/recipes";
 import type { ItemID, Recipe } from "shared/recipes";
 
 // ---------------------------------------------------------------------------
@@ -123,6 +123,26 @@ describe("getRecipeByResult", () => {
 });
 
 // ---------------------------------------------------------------------------
+// isRecipeID
+// ---------------------------------------------------------------------------
+describe("isRecipeID", () => {
+	it("returns true for each valid RecipeID", () => {
+		expect(isRecipeID("copper_wire")).toBe(true);
+		expect(isRecipeID("steel_ingot")).toBe(true);
+		expect(isRecipeID("mechanical_assembly")).toBe(true);
+		expect(isRecipeID("hardwood_table")).toBe(true);
+	});
+
+	it("returns false for an unknown string", () => {
+		expect(isRecipeID("nonexistent_recipe")).toBe(false);
+	});
+
+	it("returns false for a raw material ID that is not a recipe key", () => {
+		expect(isRecipeID("copper_ore")).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
 // canCraft
 // ---------------------------------------------------------------------------
 describe("canCraft", () => {
@@ -183,6 +203,7 @@ describe("canCraft", () => {
 	});
 
 	it("returns false for an unknown recipe ID", () => {
-		expect(canCraft("nonexistent_recipe", { copper_ore: 10 })).toBe(false);
+		// canCraft is typed to only accept RecipeID; use isRecipeID to guard untrusted strings
+		expect(isRecipeID("nonexistent_recipe")).toBe(false);
 	});
 });
